@@ -80,6 +80,7 @@ struct _GstPlayer
   GstState target_state;
   gboolean is_live;
   gboolean seek_pending;
+  GSource *tick_source;
 };
 
 struct _GstPlayerClass
@@ -197,8 +198,11 @@ gst_player_finalize (GObject * object)
 {
   GstPlayer *self = GST_PLAYER (object);
 
+  GST_TRACE_OBJECT (self, "Stopping main thread");
   g_main_loop_quit (self->loop);
   g_thread_join (self->thread);
+
+  GST_TRACE_OBJECT (self, "Finalizing");
 
   g_free (self->uri);
   if (self->application_context)
@@ -382,6 +386,28 @@ tick_cb (gpointer user_data)
   }
 
   return TRUE;
+}
+
+static void
+add_tick_source (GstPlayer * self)
+{
+  if (self->tick_source)
+    return;
+
+  self->tick_source = g_timeout_source_new (100);
+  g_source_set_callback (self->tick_source, (GSourceFunc) tick_cb, self, NULL);
+  g_source_attach (self->tick_source, self->context);
+}
+
+static void
+remove_tick_source (GstPlayer * self)
+{
+  if (!self->tick_source)
+    return;
+
+  g_source_destroy (self->tick_source);
+  g_source_unref (self->tick_source);
+  self->tick_source = NULL;
 }
 
 typedef struct
@@ -677,6 +703,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       gst_element_query_duration (self->playbin, GST_FORMAT_TIME, &duration);
       emit_duration_changed (self, duration);
       tick_cb (self);
+    } else if (old_state == GST_STATE_PAUSED && new_state == GST_STATE_PLAYING) {
+      add_tick_source (self);
     }
   }
 }
@@ -722,16 +750,12 @@ gst_player_main (gpointer data)
   GstPlayer *self = GST_PLAYER (data);
   GstBus *bus;
   GSource *source;
-  GSource *tick_source, *bus_source;
+  GSource *bus_source;
 
   GST_TRACE_OBJECT (self, "Starting main thread");
 
   self->context = g_main_context_new ();
   g_main_context_push_thread_default (self->context);
-
-  tick_source = g_timeout_source_new (100);
-  g_source_set_callback (tick_source, (GSourceFunc) tick_cb, self, NULL);
-  g_source_attach (tick_source, self->context);
 
   self->loop = g_main_loop_new (self->context, FALSE);
 
@@ -779,8 +803,7 @@ gst_player_main (gpointer data)
   g_source_destroy (bus_source);
   g_source_unref (bus_source);
 
-  g_source_destroy (tick_source);
-  g_source_unref (tick_source);
+  remove_tick_source (self);
 
   g_main_context_pop_thread_default (self->context);
   g_main_context_unref (self->context);
@@ -855,6 +878,9 @@ gst_player_pause_internal (gpointer user_data)
 
   g_return_val_if_fail (self->uri, FALSE);
 
+  tick_cb (self);
+  remove_tick_source (self);
+
   state_ret = gst_element_set_state (self->playbin, GST_STATE_PAUSED);
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     // FIXME
@@ -880,6 +906,9 @@ gst_player_stop_internal (gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
 
   GST_DEBUG_OBJECT (self, "Stop");
+
+  tick_cb (self);
+  remove_tick_source (self);
 
   gst_element_set_state (self->playbin, GST_STATE_READY);
   self->seek_pending = FALSE;
@@ -913,6 +942,9 @@ gst_player_seek_internal (gpointer user_data)
       GST_TIME_ARGS (position));
 
   self->seek_pending = TRUE;
+
+  remove_tick_source (self);
+
   ret =
       gst_element_seek_simple (self->playbin, GST_FORMAT_TIME,
       GST_SEEK_FLAG_FLUSH, position);
