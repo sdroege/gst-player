@@ -20,6 +20,7 @@
 
 /* TODO:
  *
+ * - Seek throttling
  * - Media info, tags
  * - Audio track selection
  * - Subtitle track selection, external subs, disable
@@ -47,7 +48,7 @@ enum
   PROP_0,
   PROP_DISPATCH_TO_MAIN_CONTEXT,
   PROP_URI,
-  PROP_PLAYING,
+  PROP_IS_PLAYING,
   PROP_POSITION,
   PROP_DURATION,
   PROP_VOLUME,
@@ -143,8 +144,8 @@ gst_player_class_init (GstPlayerClass * klass)
   param_specs[PROP_URI] = g_param_spec_string ("uri", "URI", "Current URI",
       NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-  param_specs[PROP_PLAYING] =
-      g_param_spec_boolean ("playing", "Playing", "Currently playing",
+  param_specs[PROP_IS_PLAYING] =
+      g_param_spec_boolean ("is-playing", "Is Playing", "Currently playing",
       FALSE, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_POSITION] =
@@ -294,9 +295,9 @@ gst_player_get_property (GObject * object, guint prop_id,
     case PROP_URI:
       g_value_set_string (value, self->uri);
       break;
-    case PROP_PLAYING:
+    case PROP_IS_PLAYING:
       g_value_set_boolean (value, self->current_state == GST_STATE_PLAYING);
-      GST_TRACE_OBJECT (self, "Returning playing=%d",
+      GST_TRACE_OBJECT (self, "Returning is-playing=%d",
           g_value_get_boolean (value));
       break;
     case PROP_POSITION:{
@@ -688,6 +689,12 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   gst_message_parse_state_changed (msg, &old_state, &new_state, &pending_state);
 
   if (GST_MESSAGE_SRC (msg) == GST_OBJECT (self->playbin)) {
+    if ((self->current_state == GST_STATE_PLAYING
+            && new_state != GST_STATE_PLAYING)
+        || (self->current_state != GST_STATE_PLAYING
+            && new_state == GST_STATE_PLAYING))
+      g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_IS_PLAYING]);
+
     self->current_state = new_state;
 
     if (old_state == GST_STATE_READY && new_state == GST_STATE_PAUSED) {
