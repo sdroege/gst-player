@@ -77,7 +77,7 @@ struct _GstPlayer
   guintptr window_handle;
 
   GstElement *playbin;
-  GstState target_state;
+  GstState target_state, current_state;
   gboolean is_live;
   gboolean seek_pending;
   GSource *tick_source;
@@ -287,7 +287,7 @@ gst_player_get_property (GObject * object, guint prop_id,
       g_value_set_string (value, self->uri);
       break;
     case PROP_PLAYING:
-      g_value_set_boolean (value, self->target_state == GST_STATE_PLAYING);
+      g_value_set_boolean (value, self->current_state == GST_STATE_PLAYING);
       GST_TRACE_OBJECT (self, "Returning playing=%d",
           g_value_get_boolean (value));
       break;
@@ -468,6 +468,7 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   g_free (name);
 
   self->target_state = GST_STATE_NULL;
+  self->current_state = GST_STATE_NULL;
   gst_element_set_state (self->playbin, GST_STATE_NULL);
   self->seek_pending = FALSE;
 }
@@ -679,6 +680,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   gst_message_parse_state_changed (msg, &old_state, &new_state, &pending_state);
 
   if (GST_MESSAGE_SRC (msg) == GST_OBJECT (self->playbin)) {
+    self->current_state = new_state;
+
     if (old_state == GST_STATE_READY && new_state == GST_STATE_PAUSED) {
       GstElement *video_sink;
       GstPad *video_sink_pad;
@@ -792,6 +795,7 @@ gst_player_main (gpointer data)
       G_CALLBACK (request_state_cb), self);
 
   self->target_state = GST_STATE_NULL;
+  self->current_state = GST_STATE_NULL;
 
   GST_TRACE_OBJECT (self, "Starting main loop");
   g_main_loop_run (self->loop);
@@ -810,6 +814,7 @@ gst_player_main (gpointer data)
   self->context = NULL;
 
   self->target_state = GST_STATE_NULL;
+  self->current_state = GST_STATE_NULL;
   if (self->playbin) {
     gst_element_set_state (self->playbin, GST_STATE_NULL);
     gst_object_unref (self->playbin);
