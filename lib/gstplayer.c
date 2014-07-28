@@ -19,11 +19,19 @@
  */
 
 /* TODO:
+ *
  * - Media info, tags
  * - Audio track selection
  * - Subtitle track selection, external subs, disable
  * - Visualization
  * - Playback rate
+ * - volume/mute change notification
+ * - Equalizer
+ * - Gapless playback
+ * - Frame stepping
+ * - Subtitle font, connection speed
+ * - Color balance, deinterlacing
+ * - Buffering control (-> progressive downloading)
  *
  */
 
