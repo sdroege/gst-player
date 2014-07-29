@@ -33,6 +33,7 @@
  * - Subtitle font, connection speed
  * - Color balance, deinterlacing
  * - Buffering control (-> progressive downloading)
+ * - Playlist/queue object
  *
  */
 
