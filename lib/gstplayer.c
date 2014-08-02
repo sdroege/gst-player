@@ -237,14 +237,19 @@ gst_player_set_uri (gpointer user_data)
   GST_DEBUG_OBJECT (self, "Changing URI from '%s' to '%s'",
       GST_STR_NULL (self->uri), GST_STR_NULL (uri));
   g_free (self->uri);
-  self->uri = uri;
+  self->uri = uri ? g_strdup (uri) : NULL;
 
   gst_element_set_state (self->playbin, GST_STATE_READY);
   g_object_set (self->playbin, "uri", uri, NULL);
 
-  g_slice_free (SetUriData, data);
-
   return FALSE;
+}
+
+static void
+free_set_uri_data (SetUriData * data)
+{
+  g_free (data->uri);
+  g_slice_free (SetUriData, data);
 }
 
 static void
@@ -262,7 +267,8 @@ gst_player_set_property (GObject * object, guint prop_id,
       SetUriData *data = g_slice_new (SetUriData);
       data->player = self;
       data->uri = g_value_dup_string (value);
-      g_main_context_invoke (self->context, gst_player_set_uri, data);
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_uri, data, (GDestroyNotify) free_set_uri_data);
       break;
     }
     case PROP_VOLUME:
@@ -372,6 +378,12 @@ position_updated_dispatch (gpointer user_data)
   return FALSE;
 }
 
+static void
+free_position_updated_signal_data (PositionUpdatedSignalData * data)
+{
+  g_slice_free (PositionUpdatedSignalData, data);
+}
+
 static gboolean
 tick_cb (gpointer user_data)
 {
@@ -387,8 +399,9 @@ tick_cb (gpointer user_data)
 
       data->player = self;
       data->position = position;
-      g_main_context_invoke (self->application_context,
-          position_updated_dispatch, data);
+      g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+          position_updated_dispatch, data,
+          (GDestroyNotify) free_position_updated_signal_data);
     } else {
       g_signal_emit (self, signals[SIGNAL_POSITION_UPDATED], 0, position);
       g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_POSITION]);
@@ -432,10 +445,15 @@ error_dispatch (gpointer user_data)
   ErrorSignalData *data = user_data;
 
   g_signal_emit (data->player, signals[SIGNAL_ERROR], 0, data->err);
-  g_clear_error (&data->err);
-  g_slice_free (ErrorSignalData, data);
 
   return FALSE;
+}
+
+static void
+free_error_signal_data (ErrorSignalData * data)
+{
+  g_clear_error (&data->err);
+  g_slice_free (ErrorSignalData, data);
 }
 
 static void
@@ -450,7 +468,8 @@ emit_error (GstPlayer * self, GError * err)
     data->player = self;
     // FIXME
     data->err = err ? g_error_copy (err) : NULL;
-    g_main_context_invoke (self->application_context, error_dispatch, data);
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        error_dispatch, data, (GDestroyNotify) free_error_signal_data);
   } else {
     g_signal_emit (self, signals[SIGNAL_ERROR], 0, err);
   }
@@ -581,9 +600,15 @@ video_dimensions_changed_dispatch (gpointer user_data)
 
   g_signal_emit (data->player, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
       data->width, data->height);
-  g_slice_free (VideoDimensionsChangedSignalData, data);
 
   return FALSE;
+}
+
+static void
+free_video_dimensions_changed_signal_data (VideoDimensionsChangedSignalData *
+    data)
+{
+  g_slice_free (VideoDimensionsChangedSignalData, data);
 }
 
 static void
@@ -620,8 +645,9 @@ check_video_dimensions_changed (GstPlayer * self)
         data->player = self;
         data->width = info.width;
         data->height = info.height;
-        g_main_context_invoke (self->application_context,
-            video_dimensions_changed_dispatch, data);
+        g_main_context_invoke_full (self->application_context,
+            G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
+            (GDestroyNotify) free_video_dimensions_changed_signal_data);
       } else {
         g_signal_emit (self, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
             info.width, info.height);
@@ -657,9 +683,14 @@ duration_changed_dispatch (gpointer user_data)
       data->duration);
   g_object_notify_by_pspec (G_OBJECT (data->player),
       param_specs[PROP_DURATION]);
-  g_slice_free (DurationChangedSignalData, data);
 
   return FALSE;
+}
+
+static void
+free_duration_changed_signal_data (DurationChangedSignalData * data)
+{
+  g_slice_free (DurationChangedSignalData, data);
 }
 
 static void
@@ -673,8 +704,9 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
 
     data->player = self;
     data->duration = duration;
-    g_main_context_invoke (self->application_context, duration_changed_dispatch,
-        data);
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        duration_changed_dispatch, data,
+        (GDestroyNotify) free_duration_changed_signal_data);
   } else {
     g_signal_emit (self, signals[SIGNAL_DURATION_CHANGED], 0, duration);
     g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_DURATION]);
@@ -975,9 +1007,13 @@ gst_player_seek_internal (gpointer user_data)
     emit_error (self, NULL);
   }
 
-  g_slice_free (SeekData, data);
-
   return FALSE;
+}
+
+static void
+free_seek_data_data (SeekData * data)
+{
+  g_slice_free (SeekData, data);
 }
 
 void
@@ -992,5 +1028,6 @@ gst_player_seek (GstPlayer * self, GstClockTime position)
 
   data->player = self;
   data->position = position;
-  g_main_context_invoke (self->context, gst_player_seek_internal, data);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_seek_internal, data, (GDestroyNotify) free_seek_data_data);
 }
