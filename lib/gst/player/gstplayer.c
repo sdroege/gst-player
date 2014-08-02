@@ -459,8 +459,12 @@ free_error_signal_data (ErrorSignalData * data)
 static void
 emit_error (GstPlayer * self, GError * err)
 {
-  GST_ERROR_OBJECT (self, "Error: %s (%s, %d)", err->message,
-      g_quark_to_string (err->domain), err->code);
+  if (err) {
+    GST_ERROR_OBJECT (self, "Error: %s (%s, %d)", err->message,
+        g_quark_to_string (err->domain), err->code);
+  } else {
+    GST_ERROR_OBJECT (self, "Error");
+  }
 
   if (self->dispatch_to_main_context) {
     ErrorSignalData *data = g_slice_new (ErrorSignalData);
