@@ -146,8 +146,7 @@ gst_player_class_init (GstPlayerClass * klass)
   param_specs[PROP_DISPATCH_TO_MAIN_CONTEXT] =
       g_param_spec_boolean ("dispatch-to-main-context",
       "Dispatch to main context", "Dispatch to the thread default main context",
-      FALSE,
-      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_URI] = g_param_spec_string ("uri", "URI", "Current URI",
       NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
@@ -238,7 +237,7 @@ typedef struct
 } SetUriData;
 
 static gboolean
-gst_player_set_uri (gpointer user_data)
+gst_player_set_uri_internal (gpointer user_data)
 {
   SetUriData *data = user_data;
   GstPlayer *self = data->player;
@@ -278,7 +277,8 @@ gst_player_set_property (GObject * object, guint prop_id,
       data->player = self;
       data->uri = g_value_dup_string (value);
       g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-          gst_player_set_uri, data, (GDestroyNotify) free_set_uri_data);
+          gst_player_set_uri_internal, data,
+          (GDestroyNotify) free_set_uri_data);
       break;
     }
     case PROP_VOLUME:
@@ -1048,4 +1048,140 @@ gst_player_seek (GstPlayer * self, GstClockTime position)
   data->position = position;
   g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
       gst_player_seek_internal, data, (GDestroyNotify) free_seek_data_data);
+}
+
+gboolean
+gst_player_get_dispatch_to_main_context (GstPlayer * self)
+{
+  gboolean val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  g_object_get (self, "dispatch-to-main-context", &val, NULL);
+
+  return val;
+}
+
+void
+gst_player_set_dispatch_to_main_context (GstPlayer * self, gboolean val)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_object_set (self, "dispatch-to-main-context", val, NULL);
+}
+
+gchar *
+gst_player_get_uri (GstPlayer * self)
+{
+  gchar *val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  g_object_get (self, "uri", &val, NULL);
+
+  return val;
+}
+
+void
+gst_player_set_uri (GstPlayer * self, const gchar * val)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_object_set (self, "uri", val, NULL);
+}
+
+gboolean
+gst_player_is_playing (GstPlayer * self)
+{
+  gboolean val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  g_object_get (self, "is-playing", &val, NULL);
+
+  return val;
+}
+
+GstClockTime
+gst_player_get_position (GstPlayer * self)
+{
+  GstClockTime val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), GST_CLOCK_TIME_NONE);
+
+  g_object_get (self, "position", &val, NULL);
+
+  return val;
+}
+
+GstClockTime
+gst_player_get_duration (GstPlayer * self)
+{
+  GstClockTime val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), GST_CLOCK_TIME_NONE);
+
+  g_object_get (self, "duration", &val, NULL);
+
+  return val;
+}
+
+gdouble
+gst_player_get_volume (GstPlayer * self)
+{
+  gdouble val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), 1.0);
+
+  g_object_get (self, "volume", &val, NULL);
+
+  return val;
+}
+
+void
+gst_player_set_volume (GstPlayer * self, gdouble val)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_object_set (self, "volume", val, NULL);
+}
+
+gboolean
+gst_player_get_mute (GstPlayer * self)
+{
+  gboolean val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  g_object_get (self, "mute", &val, NULL);
+
+  return val;
+}
+
+void
+gst_player_set_mute (GstPlayer * self, gboolean val)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_object_set (self, "mute", val, NULL);
+}
+
+gpointer
+gst_player_get_window_handle (GstPlayer * self)
+{
+  gpointer val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  g_object_get (self, "window-handle", &val, NULL);
+
+  return val;
+}
+
+void
+gst_player_set_window_handle (GstPlayer * self, gpointer val)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_object_set (self, "window-handle", val, NULL);
 }

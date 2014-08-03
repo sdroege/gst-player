@@ -36,15 +36,41 @@ typedef struct _GstPlayerClass GstPlayerClass;
 #define GST_PLAYER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_PLAYER, GstPlayerClass))
 #define GST_PLAYER_CAST(obj)        ((GstPlayer*)(obj))
 
-GType gst_player_get_type (void);
+GType        gst_player_get_type                      (void);
 
-GstPlayer * gst_player_new (void);
+GstPlayer *  gst_player_new                           (void);
 
-void gst_player_play  (GstPlayer * player);
-void gst_player_pause (GstPlayer * player);
-void gst_player_stop  (GstPlayer * player);
+void         gst_player_play                          (GstPlayer    * player);
+void         gst_player_pause                         (GstPlayer    * player);
+void         gst_player_stop                          (GstPlayer    * player);
 
-void gst_player_seek  (GstPlayer * player, GstClockTime position);
+void         gst_player_seek                          (GstPlayer    * player,
+                                                       GstClockTime   position);
+
+gboolean     gst_player_get_dispatch_to_main_context  (GstPlayer    * player);
+void         gst_player_set_dispatch_to_main_context  (GstPlayer    * player,
+                                                       gboolean       val);
+
+gchar *      gst_player_get_uri                       (GstPlayer    * player);
+void         gst_player_set_uri                       (GstPlayer    * player,
+                                                       const gchar  * uri);
+
+gboolean     gst_player_is_playing                    (GstPlayer    * player);
+
+GstClockTime gst_player_get_position                  (GstPlayer    * player);
+GstClockTime gst_player_get_duration                  (GstPlayer    * player);
+
+gdouble      gst_player_get_volume                    (GstPlayer    * player);
+void         gst_player_set_volume                    (GstPlayer    * player,
+                                                       gdouble        val);
+
+gboolean     gst_player_get_mute                      (GstPlayer    * player);
+void         gst_player_set_mute                      (GstPlayer    * player,
+                                                       gboolean       val);
+
+gpointer     gst_player_get_window_handle             (GstPlayer    * player);
+void         gst_player_set_window_handle             (GstPlayer    * player,
+                                                       gpointer       val);
 
 G_END_DECLS
 
