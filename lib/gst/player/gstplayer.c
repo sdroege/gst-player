@@ -26,6 +26,7 @@
 
 /* TODO:
  *
+ * - Buffering notifications
  * - Seek throttling
  * - Media info, tags
  * - Audio track selection
@@ -40,6 +41,7 @@
  * - Color balance, deinterlacing
  * - Buffering control (-> progressive downloading)
  * - Playlist/queue object
+ * - Custom video sink (e.g. embed in GL scene)
  *
  */
 
