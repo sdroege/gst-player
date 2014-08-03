@@ -632,15 +632,16 @@ check_video_dimensions_changed (GstPlayer * self)
   GstPad *video_sink_pad;
   GstCaps *caps;
   GstVideoInfo info;
+  gint width = 0, height = 0;
 
   g_object_get (self->playbin, "video-sink", &video_sink, NULL);
   if (!video_sink)
-    return;
+    goto out;
 
   video_sink_pad = gst_element_get_static_pad (video_sink, "sink");
   if (!video_sink_pad) {
     gst_object_unref (video_sink);
-    return;
+    goto out;
   }
 
   caps = gst_pad_get_current_caps (video_sink_pad);
@@ -651,27 +652,30 @@ check_video_dimensions_changed (GstPlayer * self)
 
       GST_DEBUG_OBJECT (self, "Video dimensions changed: %dx%d", info.width,
           info.height);
-
-      if (self->dispatch_to_main_context) {
-        VideoDimensionsChangedSignalData *data =
-            g_slice_new (VideoDimensionsChangedSignalData);
-
-        data->player = self;
-        data->width = info.width;
-        data->height = info.height;
-        g_main_context_invoke_full (self->application_context,
-            G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
-            (GDestroyNotify) free_video_dimensions_changed_signal_data);
-      } else {
-        g_signal_emit (self, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
-            info.width, info.height);
-      }
+      width = info.width;
+      height = info.height;
     }
 
     gst_caps_unref (caps);
   }
   gst_object_unref (video_sink_pad);
   gst_object_unref (video_sink);
+
+out:
+  if (self->dispatch_to_main_context) {
+    VideoDimensionsChangedSignalData *data =
+        g_slice_new (VideoDimensionsChangedSignalData);
+
+    data->player = self;
+    data->width = width;
+    data->height = height;
+    g_main_context_invoke_full (self->application_context,
+        G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
+        (GDestroyNotify) free_video_dimensions_changed_signal_data);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
+        width, height);
+  }
 }
 
 static void
@@ -757,7 +761,6 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
         video_sink_pad = gst_element_get_static_pad (video_sink, "sink");
 
         if (video_sink_pad) {
-          check_video_dimensions_changed (self);
           g_signal_connect (video_sink_pad, "notify::caps",
               (GCallback) notify_caps_cb, self);
           gst_object_unref (video_sink_pad);
@@ -765,6 +768,7 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
         gst_object_unref (video_sink);
       }
 
+      check_video_dimensions_changed (self);
       gst_element_query_duration (self->playbin, GST_FORMAT_TIME, &duration);
       emit_duration_changed (self, duration);
       tick_cb (self);
