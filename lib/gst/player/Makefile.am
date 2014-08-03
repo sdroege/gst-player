@@ -26,3 +26,47 @@ libgstplayer_HEADERS = \
 	player.h \
 	gstplayer.h
 
+CLEANFILES =
+
+if HAVE_INTROSPECTION
+BUILT_GIRSOURCES = GstPlayer-@GST_PLAYER_API_VERSION@.gir
+
+gir_headers=$(patsubst %,$(srcdir)/%, $(libgstplayer_HEADERS))
+gir_sources=$(patsubst %,$(srcdir)/%, $(libgstplayer_@GST_PLAYER_API_VERSION@_la_SOURCES))
+
+GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@GST_PLAYER_API_VERSION@.la
+	$(AM_V_GEN)PKG_CONFIG_PATH="$(GST_PKG_CONFIG_PATH)" \
+		$(INTROSPECTION_SCANNER) -v --namespace GstPlayer \
+		--nsversion=@GST_PLAYER_API_VERSION@ \
+		--warn-all \
+		--strip-prefix=Gst \
+		-I$(top_srcdir)/lib \
+		-I$(top_builddir)/lib \
+		--c-include "gst/player/player.h" \
+		--add-include-path=$(top_builddir)/lib \
+		--library-path=$(top_builddir)/lib \
+		--library=libgstplayer-@GST_PLAYER_API_VERSION@.la \
+		--include=GObject-2.0 \
+		--libtool="${LIBTOOL}" \
+		--pkg gobject-2.0 \
+		--pkg gstreamer-1.0 \
+		--pkg-export gstreamer-player-@GST_PLAYER_API_VERSION@ \
+		--add-init-section="gst_init(NULL,NULL);" \
+		--output $@ \
+		$(gir_headers) \
+		$(gir_sources)
+
+# INTROSPECTION_GIRDIR/INTROSPECTION_TYPELIBDIR aren't the right place to
+# install anything - we need to install inside our prefix.
+girdir = $(datadir)/gir-1.0
+gir_DATA = $(BUILT_GIRSOURCES)
+
+typelibsdir = $(libdir)/girepository-1.0/
+
+typelibs_DATA = $(BUILT_GIRSOURCES:.gir=.typelib)
+
+%.typelib: %.gir $(INTROSPECTION_COMPILER)
+	$(AM_V_GEN)$(INTROSPECTION_COMPILER) --includedir=$(srcdir)/lib --includedir=$(builddir)/lib $(INTROSPECTION_COMPILER_OPTS) $< -o $(@F)
+
+CLEANFILES += $(BUILT_GIRSOURCES) $(typelibs_DATA)
+endif
