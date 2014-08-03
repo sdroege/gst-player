@@ -1,0 +1,7 @@
+if ENABLE_GTK_DOC
+DOCS_SUBDIRS = lib
+endif
+
+SUBDIRS = $(DOCS_SUBDIRS)
+DIST_SUBDIRS = lib
+

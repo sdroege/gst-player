@@ -1,0 +1,20 @@
+<SECTION>
+<FILE>gstplayer</FILE>
+gst_player_new
+gst_player_play
+gst_player_pause
+gst_player_stop
+gst_player_seek
+<SUBSECTION Standard>
+GST_IS_PLAYER
+GST_IS_PLAYER_CLASS
+GST_PLAYER
+GST_PLAYER_CAST
+GST_PLAYER_CLASS
+GST_PLAYER_GET_CLASS
+GST_TYPE_PLAYER
+GstPlayer
+GstPlayerClass
+gst_player_get_type
+</SECTION>
+

@@ -18,6 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:gstplayer
+ * @short_description: GStreamer Player API
+ *
+ */
+
 /* TODO:
  *
  * - Seek throttling
