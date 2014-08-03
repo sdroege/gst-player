@@ -35,6 +35,7 @@ GST_PLAYER_CLASS
 GST_PLAYER_GET_CLASS
 GST_TYPE_PLAYER
 GstPlayer
+GstPlayerPrivate
 GstPlayerClass
 gst_player_get_type
 </SECTION>
