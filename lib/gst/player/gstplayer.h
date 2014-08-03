@@ -27,6 +27,19 @@ G_BEGIN_DECLS
 
 typedef struct _GstPlayer GstPlayer;
 typedef struct _GstPlayerClass GstPlayerClass;
+typedef struct _GstPlayerPrivate GstPlayerPrivate;
+
+struct _GstPlayer
+{
+  GstObject parent;
+
+  GstPlayerPrivate *priv;
+};
+
+struct _GstPlayerClass
+{
+  GstObjectClass parent_class;
+};
 
 #define GST_TYPE_PLAYER             (gst_player_get_type ())
 #define GST_IS_PLAYER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER))

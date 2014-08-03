@@ -76,10 +76,8 @@ enum
   SIGNAL_LAST
 };
 
-struct _GstPlayer
+struct _GstPlayerPrivate
 {
-  GstObject parent;
-
   gboolean dispatch_to_main_context;
   GMainContext *application_context;
 
@@ -100,13 +98,8 @@ struct _GstPlayer
   GSource *tick_source;
 };
 
-struct _GstPlayerClass
-{
-  GstObjectClass parent_class;
-};
-
 #define parent_class gst_player_parent_class
-G_DEFINE_TYPE (GstPlayer, gst_player, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstPlayer, gst_player, GST_TYPE_OBJECT);
 
 static guint signals[SIGNAL_LAST] = { 0, };
 static GParamSpec *param_specs[PROP_LAST] = { NULL, };
@@ -123,14 +116,17 @@ static void
 gst_player_init (GstPlayer * self)
 {
   GST_TRACE_OBJECT (self, "Initializing");
-  g_mutex_init (&self->lock);
-  g_cond_init (&self->cond);
 
-  g_mutex_lock (&self->lock);
-  self->thread = g_thread_new ("GstPlayer", gst_player_main, self);
-  while (!self->loop || !g_main_loop_is_running (self->loop))
-    g_cond_wait (&self->cond, &self->lock);
-  g_mutex_unlock (&self->lock);
+  self->priv = gst_player_get_instance_private (self);
+
+  g_mutex_init (&self->priv->lock);
+  g_cond_init (&self->priv->cond);
+
+  g_mutex_lock (&self->priv->lock);
+  self->priv->thread = g_thread_new ("GstPlayer", gst_player_main, self);
+  while (!self->priv->loop || !g_main_loop_is_running (self->priv->loop))
+    g_cond_wait (&self->priv->cond, &self->priv->lock);
+  g_mutex_unlock (&self->priv->lock);
   GST_TRACE_OBJECT (self, "Initialized");
 }
 
@@ -215,17 +211,17 @@ gst_player_finalize (GObject * object)
   GstPlayer *self = GST_PLAYER (object);
 
   GST_TRACE_OBJECT (self, "Stopping main thread");
-  g_main_loop_quit (self->loop);
-  g_thread_join (self->thread);
+  g_main_loop_quit (self->priv->loop);
+  g_thread_join (self->priv->thread);
 
   GST_TRACE_OBJECT (self, "Finalizing");
 
-  g_free (self->uri);
-  if (self->application_context)
-    g_main_context_unref (self->application_context);
+  g_free (self->priv->uri);
+  if (self->priv->application_context)
+    g_main_context_unref (self->priv->application_context);
 
-  g_mutex_clear (&self->lock);
-  g_cond_clear (&self->cond);
+  g_mutex_clear (&self->priv->lock);
+  g_cond_clear (&self->priv->cond);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -244,12 +240,12 @@ gst_player_set_uri_internal (gpointer user_data)
   gchar *uri = data->uri;
 
   GST_DEBUG_OBJECT (self, "Changing URI from '%s' to '%s'",
-      GST_STR_NULL (self->uri), GST_STR_NULL (uri));
-  g_free (self->uri);
-  self->uri = uri ? g_strdup (uri) : NULL;
+      GST_STR_NULL (self->priv->uri), GST_STR_NULL (uri));
+  g_free (self->priv->uri);
+  self->priv->uri = uri ? g_strdup (uri) : NULL;
 
-  gst_element_set_state (self->playbin, GST_STATE_READY);
-  g_object_set (self->playbin, "uri", uri, NULL);
+  gst_element_set_state (self->priv->playbin, GST_STATE_READY);
+  g_object_set (self->priv->playbin, "uri", uri, NULL);
 
   return FALSE;
 }
@@ -269,32 +265,32 @@ gst_player_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_DISPATCH_TO_MAIN_CONTEXT:
-      self->dispatch_to_main_context = g_value_get_boolean (value);
-      self->application_context = g_main_context_ref_thread_default ();
+      self->priv->dispatch_to_main_context = g_value_get_boolean (value);
+      self->priv->application_context = g_main_context_ref_thread_default ();
       break;
     case PROP_URI:{
       SetUriData *data = g_slice_new (SetUriData);
       data->player = self;
       data->uri = g_value_dup_string (value);
-      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      g_main_context_invoke_full (self->priv->context, G_PRIORITY_DEFAULT,
           gst_player_set_uri_internal, data,
           (GDestroyNotify) free_set_uri_data);
       break;
     }
     case PROP_VOLUME:
       GST_DEBUG_OBJECT (self, "Set volume=%lf", g_value_get_double (value));
-      g_object_set_property (G_OBJECT (self->playbin), "volume", value);
+      g_object_set_property (G_OBJECT (self->priv->playbin), "volume", value);
       break;
     case PROP_MUTE:
       GST_DEBUG_OBJECT (self, "Set mute=%d", g_value_get_boolean (value));
-      g_object_set_property (G_OBJECT (self->playbin), "mute", value);
+      g_object_set_property (G_OBJECT (self->priv->playbin), "mute", value);
       break;
     case PROP_WINDOW_HANDLE:
       GST_DEBUG_OBJECT (self, "Set window handle from %p to %p",
-          (gpointer) self->window_handle, g_value_get_pointer (value));
-      self->window_handle = (guintptr) g_value_get_pointer (value);
-      gst_video_overlay_set_window_handle (GST_VIDEO_OVERLAY (self->playbin),
-          self->window_handle);
+          (gpointer) self->priv->window_handle, g_value_get_pointer (value));
+      self->priv->window_handle = (guintptr) g_value_get_pointer (value);
+      gst_video_overlay_set_window_handle (GST_VIDEO_OVERLAY (self->
+              priv->playbin), self->priv->window_handle);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -310,17 +306,19 @@ gst_player_get_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_URI:
-      g_value_set_string (value, self->uri);
+      g_value_set_string (value, self->priv->uri);
       break;
     case PROP_IS_PLAYING:
-      g_value_set_boolean (value, self->current_state == GST_STATE_PLAYING);
+      g_value_set_boolean (value,
+          self->priv->current_state == GST_STATE_PLAYING);
       GST_TRACE_OBJECT (self, "Returning is-playing=%d",
           g_value_get_boolean (value));
       break;
     case PROP_POSITION:{
       gint64 position;
 
-      gst_element_query_position (self->playbin, GST_FORMAT_TIME, &position);
+      gst_element_query_position (self->priv->playbin, GST_FORMAT_TIME,
+          &position);
       g_value_set_uint64 (value, position);
       GST_TRACE_OBJECT (self, "Returning position=%" GST_TIME_FORMAT,
           GST_TIME_ARGS (g_value_get_uint64 (value)));
@@ -329,23 +327,24 @@ gst_player_get_property (GObject * object, guint prop_id,
     case PROP_DURATION:{
       gint64 duration;
 
-      gst_element_query_duration (self->playbin, GST_FORMAT_TIME, &duration);
+      gst_element_query_duration (self->priv->playbin, GST_FORMAT_TIME,
+          &duration);
       g_value_set_uint64 (value, duration);
       GST_TRACE_OBJECT (self, "Returning duration=%" GST_TIME_FORMAT,
           GST_TIME_ARGS (g_value_get_uint64 (value)));
       break;
     }
     case PROP_VOLUME:
-      g_object_get_property (G_OBJECT (self->playbin), "volume", value);
+      g_object_get_property (G_OBJECT (self->priv->playbin), "volume", value);
       GST_TRACE_OBJECT (self, "Returning volume=%lf",
           g_value_get_double (value));
       break;
     case PROP_MUTE:
-      g_object_get_property (G_OBJECT (self->playbin), "mute", value);
+      g_object_get_property (G_OBJECT (self->priv->playbin), "mute", value);
       GST_TRACE_OBJECT (self, "Returning mute=%d", g_value_get_boolean (value));
       break;
     case PROP_WINDOW_HANDLE:
-      g_value_set_pointer (value, (gpointer) self->window_handle);
+      g_value_set_pointer (value, (gpointer) self->priv->window_handle);
       GST_TRACE_OBJECT (self, "Returning window-handle=%p",
           g_value_get_pointer (value));
       break;
@@ -362,9 +361,9 @@ main_loop_running_cb (gpointer user_data)
 
   GST_TRACE_OBJECT (self, "Main loop running now");
 
-  g_mutex_lock (&self->lock);
-  g_cond_signal (&self->cond);
-  g_mutex_unlock (&self->lock);
+  g_mutex_lock (&self->priv->lock);
+  g_cond_signal (&self->priv->cond);
+  g_mutex_unlock (&self->priv->lock);
 
   return FALSE;
 }
@@ -400,17 +399,18 @@ tick_cb (gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint64 position;
 
-  if (gst_element_query_position (self->playbin, GST_FORMAT_TIME, &position)) {
+  if (gst_element_query_position (self->priv->playbin, GST_FORMAT_TIME,
+          &position)) {
     GST_LOG_OBJECT (self, "Position %" GST_TIME_FORMAT,
         GST_TIME_ARGS (position));
 
-    if (self->dispatch_to_main_context) {
+    if (self->priv->dispatch_to_main_context) {
       PositionUpdatedSignalData *data = g_slice_new (PositionUpdatedSignalData);
 
       data->player = self;
       data->position = position;
-      g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
-          position_updated_dispatch, data,
+      g_main_context_invoke_full (self->priv->application_context,
+          G_PRIORITY_DEFAULT, position_updated_dispatch, data,
           (GDestroyNotify) free_position_updated_signal_data);
     } else {
       g_signal_emit (self, signals[SIGNAL_POSITION_UPDATED], 0, position);
@@ -424,23 +424,24 @@ tick_cb (gpointer user_data)
 static void
 add_tick_source (GstPlayer * self)
 {
-  if (self->tick_source)
+  if (self->priv->tick_source)
     return;
 
-  self->tick_source = g_timeout_source_new (100);
-  g_source_set_callback (self->tick_source, (GSourceFunc) tick_cb, self, NULL);
-  g_source_attach (self->tick_source, self->context);
+  self->priv->tick_source = g_timeout_source_new (100);
+  g_source_set_callback (self->priv->tick_source, (GSourceFunc) tick_cb, self,
+      NULL);
+  g_source_attach (self->priv->tick_source, self->priv->context);
 }
 
 static void
 remove_tick_source (GstPlayer * self)
 {
-  if (!self->tick_source)
+  if (!self->priv->tick_source)
     return;
 
-  g_source_destroy (self->tick_source);
-  g_source_unref (self->tick_source);
-  self->tick_source = NULL;
+  g_source_destroy (self->priv->tick_source);
+  g_source_unref (self->priv->tick_source);
+  self->priv->tick_source = NULL;
 }
 
 typedef struct
@@ -476,14 +477,15 @@ emit_error (GstPlayer * self, GError * err)
     GST_ERROR_OBJECT (self, "Error");
   }
 
-  if (self->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context) {
     ErrorSignalData *data = g_slice_new (ErrorSignalData);
 
     data->player = self;
     // FIXME
     data->err = err ? g_error_copy (err) : NULL;
-    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
-        error_dispatch, data, (GDestroyNotify) free_error_signal_data);
+    g_main_context_invoke_full (self->priv->application_context,
+        G_PRIORITY_DEFAULT, error_dispatch, data,
+        (GDestroyNotify) free_error_signal_data);
   } else {
     g_signal_emit (self, signals[SIGNAL_ERROR], 0, err);
   }
@@ -510,10 +512,10 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   g_free (debug);
   g_free (name);
 
-  self->target_state = GST_STATE_NULL;
-  self->current_state = GST_STATE_NULL;
-  gst_element_set_state (self->playbin, GST_STATE_NULL);
-  self->seek_pending = FALSE;
+  self->priv->target_state = GST_STATE_NULL;
+  self->priv->current_state = GST_STATE_NULL;
+  gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
+  self->priv->seek_pending = FALSE;
 }
 
 static gboolean
@@ -533,8 +535,8 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
   tick_cb (self);
 
-  if (self->dispatch_to_main_context) {
-    g_main_context_invoke (self->application_context, eos_dispatch, self);
+  if (self->priv->dispatch_to_main_context) {
+    g_main_context_invoke (self->priv->application_context, eos_dispatch, self);
   } else {
     g_signal_emit (self, signals[SIGNAL_END_OF_STREAM], 0);
   }
@@ -546,19 +548,19 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint percent;
 
-  if (self->is_live)
+  if (self->priv->is_live)
     return;
 
   gst_message_parse_buffering (msg, &percent);
   GST_LOG_OBJECT (self, "Buffering %d%%", percent);
 
-  if (percent < 100 && self->target_state >= GST_STATE_PAUSED) {
+  if (percent < 100 && self->priv->target_state >= GST_STATE_PAUSED) {
     GST_DEBUG_OBJECT (self, "Waiting for buffering to finish");
-    gst_element_set_state (self->playbin, GST_STATE_PAUSED);
-  } else if (self->target_state >= GST_STATE_PLAYING) {
+    gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
+  } else if (self->priv->target_state >= GST_STATE_PLAYING) {
     GST_DEBUG_OBJECT (self, "Buffering finished - going to PLAYING");
-    gst_element_set_state (self->playbin, GST_STATE_PLAYING);
-  } else if (self->target_state >= GST_STATE_PAUSED) {
+    gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
+  } else if (self->priv->target_state >= GST_STATE_PAUSED) {
     GST_DEBUG_OBJECT (self, "Buffering finished - staying PAUSED");
   }
 }
@@ -569,9 +571,9 @@ clock_lost_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
 
   GST_DEBUG_OBJECT (self, "Clock lost");
-  if (self->target_state >= GST_STATE_PLAYING) {
-    gst_element_set_state (self->playbin, GST_STATE_PAUSED);
-    gst_element_set_state (self->playbin, GST_STATE_PLAYING);
+  if (self->priv->target_state >= GST_STATE_PLAYING) {
+    gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
+    gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
   }
 }
 
@@ -588,16 +590,16 @@ async_done_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
-  if (GST_MESSAGE_SRC (msg) == GST_OBJECT_CAST (self->playbin)
-      && self->seek_pending) {
+  if (GST_MESSAGE_SRC (msg) == GST_OBJECT_CAST (self->priv->playbin)
+      && self->priv->seek_pending) {
     GST_DEBUG_OBJECT (self, "Seek finished");
-    if (self->dispatch_to_main_context) {
-      g_main_context_invoke (self->application_context, seek_finished_dispatch,
-          self);
+    if (self->priv->dispatch_to_main_context) {
+      g_main_context_invoke (self->priv->application_context,
+          seek_finished_dispatch, self);
     } else {
       g_signal_emit (self, signals[SIGNAL_SEEK_FINISHED], 0);
     }
-    self->seek_pending = FALSE;
+    self->priv->seek_pending = FALSE;
   }
 }
 
@@ -634,7 +636,7 @@ check_video_dimensions_changed (GstPlayer * self)
   GstVideoInfo info;
   gint width = 0, height = 0;
 
-  g_object_get (self->playbin, "video-sink", &video_sink, NULL);
+  g_object_get (self->priv->playbin, "video-sink", &video_sink, NULL);
   if (!video_sink)
     goto out;
 
@@ -662,14 +664,14 @@ check_video_dimensions_changed (GstPlayer * self)
   gst_object_unref (video_sink);
 
 out:
-  if (self->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context) {
     VideoDimensionsChangedSignalData *data =
         g_slice_new (VideoDimensionsChangedSignalData);
 
     data->player = self;
     data->width = width;
     data->height = height;
-    g_main_context_invoke_full (self->application_context,
+    g_main_context_invoke_full (self->priv->application_context,
         G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
         (GDestroyNotify) free_video_dimensions_changed_signal_data);
   } else {
@@ -717,13 +719,13 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
   GST_DEBUG_OBJECT (self, "Duration changed %" GST_TIME_FORMAT,
       GST_TIME_ARGS (duration));
 
-  if (self->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context) {
     DurationChangedSignalData *data = g_slice_new (DurationChangedSignalData);
 
     data->player = self;
     data->duration = duration;
-    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
-        duration_changed_dispatch, data,
+    g_main_context_invoke_full (self->priv->application_context,
+        G_PRIORITY_DEFAULT, duration_changed_dispatch, data,
         (GDestroyNotify) free_duration_changed_signal_data);
   } else {
     g_signal_emit (self, signals[SIGNAL_DURATION_CHANGED], 0, duration);
@@ -739,14 +741,14 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
   gst_message_parse_state_changed (msg, &old_state, &new_state, &pending_state);
 
-  if (GST_MESSAGE_SRC (msg) == GST_OBJECT (self->playbin)) {
-    if ((self->current_state == GST_STATE_PLAYING
+  if (GST_MESSAGE_SRC (msg) == GST_OBJECT (self->priv->playbin)) {
+    if ((self->priv->current_state == GST_STATE_PLAYING
             && new_state != GST_STATE_PLAYING)
-        || (self->current_state != GST_STATE_PLAYING
+        || (self->priv->current_state != GST_STATE_PLAYING
             && new_state == GST_STATE_PLAYING))
       g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_IS_PLAYING]);
 
-    self->current_state = new_state;
+    self->priv->current_state = new_state;
 
     if (old_state == GST_STATE_READY && new_state == GST_STATE_PAUSED) {
       GstElement *video_sink;
@@ -755,7 +757,7 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
       GST_DEBUG_OBJECT (self, "Initial PAUSED - pre-rolled");
 
-      g_object_get (self->playbin, "video-sink", &video_sink, NULL);
+      g_object_get (self->priv->playbin, "video-sink", &video_sink, NULL);
 
       if (video_sink) {
         video_sink_pad = gst_element_get_static_pad (video_sink, "sink");
@@ -769,7 +771,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       }
 
       check_video_dimensions_changed (self);
-      gst_element_query_duration (self->playbin, GST_FORMAT_TIME, &duration);
+      gst_element_query_duration (self->priv->playbin, GST_FORMAT_TIME,
+          &duration);
       emit_duration_changed (self, duration);
       tick_cb (self);
     } else if (old_state == GST_STATE_PAUSED && new_state == GST_STATE_PLAYING) {
@@ -784,7 +787,8 @@ duration_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint64 duration;
 
-  if (gst_element_query_duration (self->playbin, GST_FORMAT_TIME, &duration)) {
+  if (gst_element_query_duration (self->priv->playbin, GST_FORMAT_TIME,
+          &duration)) {
     emit_duration_changed (self, duration);
   }
 }
@@ -796,7 +800,7 @@ latency_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
   GST_DEBUG_OBJECT (self, "Latency changed");
 
-  gst_bin_recalculate_latency (GST_BIN (self->playbin));
+  gst_bin_recalculate_latency (GST_BIN (self->priv->playbin));
 }
 
 static void
@@ -810,7 +814,7 @@ request_state_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GST_DEBUG_OBJECT (self, "State %s requested",
       gst_element_state_get_name (state));
 
-  gst_element_set_state (self->playbin, state);
+  gst_element_set_state (self->priv->playbin, state);
 }
 
 static gpointer
@@ -823,24 +827,24 @@ gst_player_main (gpointer data)
 
   GST_TRACE_OBJECT (self, "Starting main thread");
 
-  self->context = g_main_context_new ();
-  g_main_context_push_thread_default (self->context);
+  self->priv->context = g_main_context_new ();
+  g_main_context_push_thread_default (self->priv->context);
 
-  self->loop = g_main_loop_new (self->context, FALSE);
+  self->priv->loop = g_main_loop_new (self->priv->context, FALSE);
 
   source = g_idle_source_new ();
   g_source_set_callback (source, (GSourceFunc) main_loop_running_cb, self,
       NULL);
-  g_source_attach (source, self->context);
+  g_source_attach (source, self->priv->context);
   g_source_unref (source);
 
-  self->playbin = gst_element_factory_make ("playbin", "playbin");
+  self->priv->playbin = gst_element_factory_make ("playbin", "playbin");
 
-  bus = gst_element_get_bus (self->playbin);
+  bus = gst_element_get_bus (self->priv->playbin);
   bus_source = gst_bus_create_watch (bus);
   g_source_set_callback (bus_source, (GSourceFunc) gst_bus_async_signal_func,
       NULL, NULL);
-  g_source_attach (bus_source, self->context);
+  g_source_attach (bus_source, self->priv->context);
 
   g_signal_connect (G_OBJECT (bus), "message::error", G_CALLBACK (error_cb),
       self);
@@ -860,15 +864,15 @@ gst_player_main (gpointer data)
   g_signal_connect (G_OBJECT (bus), "message::request-state",
       G_CALLBACK (request_state_cb), self);
 
-  self->target_state = GST_STATE_NULL;
-  self->current_state = GST_STATE_NULL;
+  self->priv->target_state = GST_STATE_NULL;
+  self->priv->current_state = GST_STATE_NULL;
 
   GST_TRACE_OBJECT (self, "Starting main loop");
-  g_main_loop_run (self->loop);
+  g_main_loop_run (self->priv->loop);
   GST_TRACE_OBJECT (self, "Stopped main loop");
 
-  g_main_loop_unref (self->loop);
-  self->loop = NULL;
+  g_main_loop_unref (self->priv->loop);
+  self->priv->loop = NULL;
 
   g_source_destroy (bus_source);
   g_source_unref (bus_source);
@@ -876,16 +880,16 @@ gst_player_main (gpointer data)
 
   remove_tick_source (self);
 
-  g_main_context_pop_thread_default (self->context);
-  g_main_context_unref (self->context);
-  self->context = NULL;
+  g_main_context_pop_thread_default (self->priv->context);
+  g_main_context_unref (self->priv->context);
+  self->priv->context = NULL;
 
-  self->target_state = GST_STATE_NULL;
-  self->current_state = GST_STATE_NULL;
-  if (self->playbin) {
-    gst_element_set_state (self->playbin, GST_STATE_NULL);
-    gst_object_unref (self->playbin);
-    self->playbin = NULL;
+  self->priv->target_state = GST_STATE_NULL;
+  self->priv->current_state = GST_STATE_NULL;
+  if (self->priv->playbin) {
+    gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
+    gst_object_unref (self->priv->playbin);
+    self->priv->playbin = NULL;
   }
 
   GST_TRACE_OBJECT (self, "Stopped main thread");
@@ -918,14 +922,14 @@ gst_player_play_internal (gpointer user_data)
 
   GST_DEBUG_OBJECT (self, "Play");
 
-  g_return_val_if_fail (self->uri, FALSE);
+  g_return_val_if_fail (self->priv->uri, FALSE);
 
-  state_ret = gst_element_set_state (self->playbin, GST_STATE_PLAYING);
+  state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     // FIXME
     emit_error (self, NULL);
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
-    self->is_live = TRUE;
+    self->priv->is_live = TRUE;
   }
 
   return FALSE;
@@ -936,7 +940,7 @@ gst_player_play (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_play_internal, self);
+  g_main_context_invoke (self->priv->context, gst_player_play_internal, self);
 }
 
 static gboolean
@@ -947,17 +951,17 @@ gst_player_pause_internal (gpointer user_data)
 
   GST_DEBUG_OBJECT (self, "Pause");
 
-  g_return_val_if_fail (self->uri, FALSE);
+  g_return_val_if_fail (self->priv->uri, FALSE);
 
   tick_cb (self);
   remove_tick_source (self);
 
-  state_ret = gst_element_set_state (self->playbin, GST_STATE_PAUSED);
+  state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     // FIXME
     emit_error (self, NULL);
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
-    self->is_live = TRUE;
+    self->priv->is_live = TRUE;
   }
 
   return FALSE;
@@ -968,7 +972,7 @@ gst_player_pause (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_pause_internal, self);
+  g_main_context_invoke (self->priv->context, gst_player_pause_internal, self);
 }
 
 static gboolean
@@ -981,8 +985,8 @@ gst_player_stop_internal (gpointer user_data)
   tick_cb (self);
   remove_tick_source (self);
 
-  gst_element_set_state (self->playbin, GST_STATE_READY);
-  self->seek_pending = FALSE;
+  gst_element_set_state (self->priv->playbin, GST_STATE_READY);
+  self->priv->seek_pending = FALSE;
 
   return FALSE;
 }
@@ -992,7 +996,7 @@ gst_player_stop (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_stop_internal, self);
+  g_main_context_invoke (self->priv->context, gst_player_stop_internal, self);
 }
 
 typedef struct
@@ -1012,12 +1016,12 @@ gst_player_seek_internal (gpointer user_data)
   GST_DEBUG_OBJECT (self, "Seek to %" GST_TIME_FORMAT,
       GST_TIME_ARGS (position));
 
-  self->seek_pending = TRUE;
+  self->priv->seek_pending = TRUE;
 
   remove_tick_source (self);
 
   ret =
-      gst_element_seek_simple (self->playbin, GST_FORMAT_TIME,
+      gst_element_seek_simple (self->priv->playbin, GST_FORMAT_TIME,
       GST_SEEK_FLAG_FLUSH, position);
 
   if (!ret) {
@@ -1046,7 +1050,7 @@ gst_player_seek (GstPlayer * self, GstClockTime position)
 
   data->player = self;
   data->position = position;
-  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+  g_main_context_invoke_full (self->priv->context, G_PRIORITY_DEFAULT,
       gst_player_seek_internal, data, (GDestroyNotify) free_seek_data_data);
 }
 
