@@ -38,7 +38,7 @@ typedef struct _GstPlayerClass GstPlayerClass;
 
 GType gst_player_get_type (void);
 
-GstPlayer * gst_player_new (gboolean dispatch_to_main_context);
+GstPlayer * gst_player_new (void);
 
 void gst_player_play  (GstPlayer * player);
 void gst_player_pause (GstPlayer * player);

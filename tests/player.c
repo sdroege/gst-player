@@ -30,7 +30,7 @@ START_TEST (test_create_and_free)
 {
   GstPlayer * player;
 
-  player = gst_player_new (FALSE);
+  player = gst_player_new ();
   fail_unless (player != NULL);
   g_object_unref (player);
 }

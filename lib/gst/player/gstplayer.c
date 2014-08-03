@@ -147,7 +147,7 @@ gst_player_class_init (GstPlayerClass * klass)
       g_param_spec_boolean ("dispatch-to-main-context",
       "Dispatch to main context", "Dispatch to the thread default main context",
       FALSE,
-      G_PARAM_WRITABLE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_URI] = g_param_spec_string ("uri", "URI", "Current URI",
       NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
@@ -901,14 +901,13 @@ gst_player_init_once (gpointer user_data)
 }
 
 GstPlayer *
-gst_player_new (gboolean dispatch_to_main_context)
+gst_player_new (void)
 {
   static GOnce once = G_ONCE_INIT;
 
   g_once (&once, gst_player_init_once, NULL);
 
-  return g_object_new (GST_TYPE_PLAYER, "dispatch-to-main-context",
-      dispatch_to_main_context, NULL);
+  return g_object_new (GST_TYPE_PLAYER, NULL);
 }
 
 static gboolean
