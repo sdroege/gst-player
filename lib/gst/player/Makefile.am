@@ -47,6 +47,7 @@ GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@G
 		--library-path=$(top_builddir)/lib \
 		--library=libgstplayer-@GST_PLAYER_API_VERSION@.la \
 		--include=GObject-2.0 \
+		--include=Gst-1.0 \
 		--libtool="${LIBTOOL}" \
 		--pkg gobject-2.0 \
 		--pkg gstreamer-1.0 \
