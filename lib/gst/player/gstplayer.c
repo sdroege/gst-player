@@ -225,6 +225,9 @@ gst_player_finalize (GObject * object)
   if (self->application_context)
     g_main_context_unref (self->application_context);
 
+  g_mutex_clear (&self->lock);
+  g_cond_clear (&self->cond);
+
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
@@ -865,6 +868,7 @@ gst_player_main (gpointer data)
 
   g_source_destroy (bus_source);
   g_source_unref (bus_source);
+  gst_object_unref (bus);
 
   remove_tick_source (self);
 
