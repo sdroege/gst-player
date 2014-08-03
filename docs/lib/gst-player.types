@@ -1,0 +1,2 @@
+#include <gst/player/gstplayer.h>
+gst_player_get_type
