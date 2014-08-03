@@ -141,6 +141,9 @@ AC_CONFIG_FILES([
   tests/Makefile
   docs/Makefile
   docs/lib/Makefile
+  pkgconfig/Makefile
+  pkgconfig/gstreamer-player.pc
+  pkgconfig/gstreamer-player-uninstalled.pc
 ])
 
 AC_OUTPUT

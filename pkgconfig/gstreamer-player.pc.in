@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@/gst-player-@GST_PLAYER_API_VERSION@
+
+Name: gstreamer-player
+Description: GStreamer Player API
+Version: @VERSION@
+Requires: gstreamer-1.0 gstreamer-video-1.0
+Libs: -L${libdir} -lgstplayer-@GST_PLAYER_API_VERSION@
+Cflags: -I${includedir}
