@@ -26,6 +26,9 @@ gst_player_get_mute
 
 gst_player_set_window_handle
 gst_player_get_window_handle
+
+GST_PLAYER_ERROR
+GstPlayerError
 <SUBSECTION Standard>
 GST_IS_PLAYER
 GST_IS_PLAYER_CLASS
@@ -38,5 +41,7 @@ GstPlayer
 GstPlayerPrivate
 GstPlayerClass
 gst_player_get_type
+
+gst_player_error_quark
 </SECTION>
 

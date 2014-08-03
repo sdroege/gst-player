@@ -51,6 +51,17 @@
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);
 #define GST_CAT_DEFAULT gst_player_debug
 
+GQuark
+gst_player_error_quark (void)
+{
+  static GQuark quark;
+
+  if (!quark)
+    quark = g_quark_from_static_string ("gst-player-error-quark");
+
+  return quark;
+}
+
 enum
 {
   PROP_0,
@@ -470,47 +481,61 @@ free_error_signal_data (ErrorSignalData * data)
 static void
 emit_error (GstPlayer * self, GError * err)
 {
-  if (err) {
-    GST_ERROR_OBJECT (self, "Error: %s (%s, %d)", err->message,
-        g_quark_to_string (err->domain), err->code);
-  } else {
-    GST_ERROR_OBJECT (self, "Error");
-  }
+  GST_ERROR_OBJECT (self, "Error: %s (%s, %d)", err->message,
+      g_quark_to_string (err->domain), err->code);
 
   if (self->priv->dispatch_to_main_context) {
     ErrorSignalData *data = g_slice_new (ErrorSignalData);
 
     data->player = self;
-    // FIXME
-    data->err = err ? g_error_copy (err) : NULL;
+    data->err = g_error_copy (err);
     g_main_context_invoke_full (self->priv->application_context,
         G_PRIORITY_DEFAULT, error_dispatch, data,
         (GDestroyNotify) free_error_signal_data);
   } else {
     g_signal_emit (self, signals[SIGNAL_ERROR], 0, err);
   }
+
+  g_error_free (err);
 }
 
 static void
 error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
-  GError *err;
-  gchar *name, *debug;
+  GError *err, *player_err;
+  gchar *name, *debug, *message, *full_message;
 
   gst_message_parse_error (msg, &err, &debug);
 
   name = gst_object_get_path_string (msg->src);
   gst_message_parse_error (msg, &err, &debug);
 
+  message = gst_error_get_message (err->domain, err->code);
+
+  if (debug)
+    full_message =
+        g_strdup_printf ("Error from element %s: %s\n%s\n%s", name, message,
+        err->message, debug);
+  else
+    full_message =
+        g_strdup_printf ("Error from element %s: %s\n%s", name, message,
+        err->message);
+
   GST_ERROR_OBJECT (self, "ERROR: from element %s: %s\n", name, err->message);
   if (debug != NULL)
     GST_ERROR_OBJECT (self, "Additional debug info:\n%s\n", debug);
 
-  emit_error (self, err);
+  player_err =
+      g_error_new_literal (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+      full_message);
+  emit_error (self, player_err);
+
   g_clear_error (&err);
   g_free (debug);
   g_free (name);
+  g_free (full_message);
+  g_free (message);
 
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_NULL;
@@ -901,6 +926,8 @@ static gpointer
 gst_player_init_once (gpointer user_data)
 {
   GST_DEBUG_CATEGORY_INIT (gst_player_debug, "gst-player", 0, "GstPlayer");
+  gst_player_error_quark ();
+
   return NULL;
 }
 
@@ -926,8 +953,8 @@ gst_player_play_internal (gpointer user_data)
 
   state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
-    // FIXME
-    emit_error (self, NULL);
+    emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+            "Failed to play"));
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
     self->priv->is_live = TRUE;
   }
@@ -958,8 +985,8 @@ gst_player_pause_internal (gpointer user_data)
 
   state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
-    // FIXME
-    emit_error (self, NULL);
+    emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+            "Failed to pause"));
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
     self->priv->is_live = TRUE;
   }
@@ -1024,10 +1051,9 @@ gst_player_seek_internal (gpointer user_data)
       gst_element_seek_simple (self->priv->playbin, GST_FORMAT_TIME,
       GST_SEEK_FLAG_FLUSH, position);
 
-  if (!ret) {
-    // FIXME
-    emit_error (self, NULL);
-  }
+  if (!ret)
+    emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+            "Failed to seek to %" GST_TIME_FORMAT, GST_TIME_ARGS (position)));
 
   return FALSE;
 }
