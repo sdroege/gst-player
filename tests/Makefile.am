@@ -8,7 +8,8 @@ TESTS_CFLAGS = \
 	$(GSTREAMER_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	-I$(top_srcdir)/lib \
-	-I$(top_builddir)/lib
+	-I$(top_builddir)/lib \
+	$(WARNING_CFLAGS)
 TESTS_LDADD = \
 	$(CHECK_LIBS) \
 	$(GSTREAMER_LIBS) \
