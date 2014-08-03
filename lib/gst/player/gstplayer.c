@@ -925,6 +925,8 @@ gst_player_main (gpointer data)
 static gpointer
 gst_player_init_once (gpointer user_data)
 {
+  gst_init (NULL, NULL);
+
   GST_DEBUG_CATEGORY_INIT (gst_player_debug, "gst-player", 0, "GstPlayer");
   gst_player_error_quark ();
 
