@@ -7,6 +7,8 @@ if HAVE_GDB
 		$(GDB) $*
 endif
 
+SUPPRESSIONS = $(top_srcdir)/gst.supp
+
 if HAVE_VALGRIND
 
 %.valgrind: %
