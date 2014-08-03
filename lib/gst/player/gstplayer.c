@@ -45,6 +45,7 @@
 
 #include "gstplayer.h"
 
+#include <gst/gst.h>
 #include <gst/video/video.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);

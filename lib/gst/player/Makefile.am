@@ -23,5 +23,6 @@ libgstplayer_@GST_PLAYER_API_VERSION@_la_LIBADD = \
 libgstplayerdir = $(includedir)/gst-player-@GST_PLAYER_API_VERSION@/gst/player
 
 libgstplayer_HEADERS = \
+	player.h \
 	gstplayer.h
 
