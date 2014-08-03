@@ -55,6 +55,11 @@ PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES(GLIB, [glib-2.0 gobject-2.0])
 PKG_CHECK_MODULES(GSTREAMER, [gstreamer-1.0 >= 1.4 gstreamer-video-1.0 >= 1.4])
 
+GLIB_PREFIX="`$PKG_CONFIG --variable=prefix glib-2.0`"
+AC_SUBST(GLIB_PREFIX)
+GST_PREFIX="`$PKG_CONFIG --variable=prefix gstreamer-1.0`"
+AC_SUBST(GST_PREFIX)
+
 PKG_CHECK_MODULES(GTK, [gtk+-3.0], [have_gtk="yes"], [have_gtk="no"])
 AM_CONDITIONAL(HAVE_GTK, test "x$have_gtk" != "xno")
 
