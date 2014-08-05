@@ -129,6 +129,7 @@ static void gst_player_get_property (GObject * object, guint prop_id,
 static gpointer gst_player_main (gpointer data);
 
 static void gst_player_seek_internal_locked (GstPlayer * self);
+static gboolean gst_player_stop_internal (gpointer user_data);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -258,10 +259,11 @@ gst_player_set_uri_internal (gpointer user_data)
 
   GST_DEBUG_OBJECT (self, "Changing URI from '%s' to '%s'",
       GST_STR_NULL (self->priv->uri), GST_STR_NULL (uri));
+
+  gst_player_stop_internal (self);
   g_free (self->priv->uri);
   self->priv->uri = uri ? g_strdup (uri) : NULL;
 
-  gst_element_set_state (self->priv->playbin, GST_STATE_READY);
   g_object_set (self->priv->playbin, "uri", uri, NULL);
 
   return FALSE;
