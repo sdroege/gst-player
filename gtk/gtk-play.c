@@ -329,7 +329,7 @@ main (gint argc, gchar ** argv)
       play.uris =
         g_list_append (play.uris,
                        gst_uri_is_valid (file_names[i]) ?
-                       file_names[i] :
+                       g_strdup (file_names[i]) :
                        gst_filename_to_uri (file_names[i], NULL));
     }
 
