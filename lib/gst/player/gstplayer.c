@@ -254,7 +254,7 @@ gst_player_set_uri_internal (gpointer user_data)
   g_mutex_lock (&self->priv->lock);
 
   GST_DEBUG_OBJECT (self, "Changing URI to '%s'",
-     GST_STR_NULL (self->priv->uri));
+      GST_STR_NULL (self->priv->uri));
 
   g_object_set (self->priv->playbin, "uri", self->priv->uri, NULL);
 

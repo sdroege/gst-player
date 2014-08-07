@@ -28,7 +28,7 @@
 
 START_TEST (test_create_and_free)
 {
-  GstPlayer * player;
+  GstPlayer *player;
 
   player = gst_player_new ();
   fail_unless (player != NULL);
