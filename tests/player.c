@@ -37,6 +37,26 @@ START_TEST (test_create_and_free)
 
 END_TEST;
 
+START_TEST (test_set_and_get_uri)
+{
+  GstPlayer *player;
+  gchar *uri;
+
+  player = gst_player_new ();
+
+  fail_unless (player != NULL);
+
+  gst_player_set_uri (player, "/path/to/a/file");
+  uri = gst_player_get_uri (player);
+
+  fail_unless (g_strcmp0 (uri, "/path/to/a/file") == 0);
+
+  g_free (uri);
+  g_object_unref (player);
+}
+
+END_TEST;
+
 static Suite *
 player_suite (void)
 {
@@ -45,6 +65,7 @@ player_suite (void)
   TCase *tc_general = tcase_create ("general");
 
   tcase_add_test (tc_general, test_create_and_free);
+  tcase_add_test (tc_general, test_set_and_get_uri);
 
   suite_add_tcase (s, tc_general);
 
