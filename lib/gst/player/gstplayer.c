@@ -244,36 +244,19 @@ gst_player_finalize (GObject * object)
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
-typedef struct
-{
-  GstPlayer *player;
-  gchar *uri;
-} SetUriData;
-
 static gboolean
 gst_player_set_uri_internal (gpointer user_data)
 {
-  SetUriData *data = user_data;
-  GstPlayer *self = data->player;
-  gchar *uri = data->uri;
+  GstPlayer *self = user_data;
 
-  GST_DEBUG_OBJECT (self, "Changing URI from '%s' to '%s'",
-      GST_STR_NULL (self->priv->uri), GST_STR_NULL (uri));
+  GST_DEBUG_OBJECT (self, "Changing URI to '%s'",
+      GST_STR_NULL (self->priv->uri));
 
   gst_player_stop_internal (self);
-  g_free (self->priv->uri);
-  self->priv->uri = uri ? g_strdup (uri) : NULL;
 
-  g_object_set (self->priv->playbin, "uri", uri, NULL);
+  g_object_set (self->priv->playbin, "uri", self->priv->uri, NULL);
 
   return FALSE;
-}
-
-static void
-free_set_uri_data (SetUriData * data)
-{
-  g_free (data->uri);
-  g_slice_free (SetUriData, data);
 }
 
 static void
@@ -288,12 +271,13 @@ gst_player_set_property (GObject * object, guint prop_id,
       self->priv->application_context = g_main_context_ref_thread_default ();
       break;
     case PROP_URI:{
-      SetUriData *data = g_slice_new (SetUriData);
-      data->player = self;
-      data->uri = g_value_dup_string (value);
-      g_main_context_invoke_full (self->priv->context, G_PRIORITY_DEFAULT,
-          gst_player_set_uri_internal, data,
-          (GDestroyNotify) free_set_uri_data);
+      if (self->priv->uri)
+        g_free (self->priv->uri);
+
+      self->priv->uri = g_value_dup_string (value);
+      GST_DEBUG_OBJECT (self, "Set uri=%s", self->priv->uri);
+      g_main_context_invoke (self->priv->context, gst_player_set_uri_internal,
+          self);
       break;
     }
     case PROP_VOLUME:
