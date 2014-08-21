@@ -287,6 +287,22 @@ eos_cb (GstPlayer * unused, GtkPlay * play)
   }
 }
 
+static void
+video_data_updated_cb (GstPlayer * unused, GstPlayerMediaInfo *info, GtkPlay *play)
+{
+  g_print (">>> URI: %p:%s\n", info, info->uri);
+
+  //gst_player_media_info_free (info);
+}
+
+static void
+audio_data_updated_cb (GstPlayer * unused, GstPlayerMediaInfo *info, GtkPlay *play)
+{
+  g_print (">>> URI: %p:%s\n", info, info->uri);
+
+  //gst_player_media_info_free (info);
+}
+
 int
 main (gint argc, gchar ** argv)
 {
@@ -353,7 +369,12 @@ main (gint argc, gchar ** argv)
       G_CALLBACK (duration_changed_cb), &play);
   g_signal_connect (play.player, "video-dimensions-changed",
       G_CALLBACK (video_dimensions_changed_cb), &play);
-  g_signal_connect (play.player, "end-of-stream", G_CALLBACK (eos_cb), &play);
+  g_signal_connect (play.player, "end-of-stream",
+      G_CALLBACK (eos_cb), &play);
+  g_signal_connect (play.player, "audio-data-updated",
+      G_CALLBACK (audio_data_updated_cb), &play);
+  g_signal_connect (play.player, "video-data-updated",
+      G_CALLBACK (video_data_updated_cb), &play);
 
   /* We have file(s) that need playing. */
   set_title (&play, g_list_first (play.uris)->data);
