@@ -18,10 +18,23 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __PLAYER_H__
-#define __PLAYER_H__
+#ifndef __GST_PLAYER_TEXT_STREAM_INFO_H__
+#define __GST_PLAYER_TEXT_STREAM_INFO_H__
 
-#include <gst/player/gstplayer.h>
-#include <gst/player/gstplayer-media-info.h>
+#include <gst/gst.h>
 
-#endif /* __PLAYER_H__ */
+G_BEGIN_DECLS
+
+typedef struct _GstPlayerTextStreamInfo GstPlayerTextStreamInfo;
+
+GType                gst_player_text_stream_info_get_type           (void);
+#define GST_PLAYER_TYPE_TEXT_STREAM_INFO  (gst_player_text_stream_info_get_type())
+
+GstPlayerTextStreamInfo * gst_player_text_stream_info_new         (gint index, GstTagList * tags);
+void                      gst_player_text_stream_info_free        (GstPlayerTextStreamInfo * textinfo);
+GstPlayerTextStreamInfo * gst_player_text_stream_info_copy        (GstPlayerTextStreamInfo * textinfo);
+gint                      gst_player_text_stream_info_get_index   (GstPlayerTextStreamInfo * textinfo);
+
+G_END_DECLS
+
+#endif /* __GST_PLAYER_TEXT_STREAM_INFO_H__ */

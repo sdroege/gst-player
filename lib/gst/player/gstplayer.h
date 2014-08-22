@@ -85,6 +85,12 @@ gpointer     gst_player_get_window_handle             (GstPlayer    * player);
 void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
 
+gboolean     gst_player_select_audio_stream           (GstPlayer    * player,
+                                                       gint           streamid);
+gboolean     gst_player_select_video_stream           (GstPlayer    * player,
+                                                       gint           streamid);
+gboolean     gst_player_select_text_stream            (GstPlayer    * player,
+                                                       gint           streamid);
 
 GQuark       gst_player_error_quark                   (void);
 #define      GST_PLAYER_ERROR                         gst_player_error_quark ()
