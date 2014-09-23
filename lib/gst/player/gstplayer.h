@@ -85,6 +85,8 @@ gpointer     gst_player_get_window_handle             (GstPlayer    * player);
 void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
 
+GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
+
 
 GQuark       gst_player_error_quark                   (void);
 #define      GST_PLAYER_ERROR                         gst_player_error_quark ()

@@ -74,6 +74,7 @@ enum
   PROP_VOLUME,
   PROP_MUTE,
   PROP_WINDOW_HANDLE,
+  PROP_PIPELINE,
   PROP_LAST
 };
 
@@ -194,6 +195,12 @@ gst_player_class_init (GstPlayerClass * klass)
       g_param_spec_pointer ("window-handle", "Window Handle",
       "Window handle into which the video should be rendered",
       G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_PIPELINE] =
+      g_param_spec_object ("pipeline", "Pipeline",
+      "GStreamer pipeline that is used",
+      GST_TYPE_ELEMENT,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, param_specs);
 
@@ -359,6 +366,9 @@ gst_player_get_property (GObject * object, guint prop_id,
       g_value_set_pointer (value, (gpointer) self->priv->window_handle);
       GST_TRACE_OBJECT (self, "Returning window-handle=%p",
           g_value_get_pointer (value));
+      break;
+    case PROP_PIPELINE:
+      g_value_set_object (value, self->priv->playbin);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -1300,4 +1310,16 @@ gst_player_set_window_handle (GstPlayer * self, gpointer val)
   g_return_if_fail (GST_IS_PLAYER (self));
 
   g_object_set (self, "window-handle", val, NULL);
+}
+
+GstElement *
+gst_player_get_pipeline (GstPlayer * self)
+{
+  GstElement *val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  g_object_get (self, "pipeline", &val, NULL);
+
+  return val;
 }
