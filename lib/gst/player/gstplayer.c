@@ -918,39 +918,19 @@ create_stream_info (GType type)
 }
 
 static void
-update_stream_info (GstPlayerStreamInfo * info, GType type,
-                    GstTagList *tags, gint index)
-{
-  if (type == GST_TYPE_PLAYER_AUDIO_STREAM_INFO) {
-    GST_PLAYER_AUDIO_STREAM_INFO(info)->index = index;
-    GST_PLAYER_AUDIO_STREAM_INFO(info)->tags = gst_tag_list_ref (tags);
-  } else if (type == GST_TYPE_PLAYER_VIDEO_STREAM_INFO) {
-    GST_PLAYER_VIDEO_STREAM_INFO(info)->index = index;
-    GST_PLAYER_VIDEO_STREAM_INFO(info)->tags = gst_tag_list_ref (tags);
-  } else if (type == GST_TYPE_PLAYER_TEXT_STREAM_INFO) {
-    GST_PLAYER_TEXT_STREAM_INFO(info)->index = index;
-    GST_PLAYER_TEXT_STREAM_INFO(info)->tags = gst_tag_list_ref (tags);
-  }
-}
-
-static void
 fetch_and_parse_media_streams (GstPlayer * self, GType type,
                                gint total, gint current)
 {
   GstTagList *temp;
   GstPlayerMediaInfo **info = NULL;
-  const gchar *tag_type;
   gint i = 0;
 
   if (type == GST_TYPE_PLAYER_AUDIO_STREAM_INFO) {
       info = &self->priv->audio_info;
-      tag_type = "get-audio-tags";
   } else if (type == GST_TYPE_PLAYER_VIDEO_STREAM_INFO) {
       info = &self->priv->video_info;
-      tag_type = "get-video-tags";
   } else if (type == GST_TYPE_PLAYER_TEXT_STREAM_INFO) {
       info = &self->priv->text_info;
-      tag_type = "get-text-tags";
   } else {
     g_assert_not_reached();
   }
@@ -966,29 +946,15 @@ fetch_and_parse_media_streams (GstPlayer * self, GType type,
   temp = gst_tag_list_new_empty ();
 
   while (i < total) {
-    GstTagList *tags = NULL;
     GstPlayerStreamInfo *minfo;
 
     minfo = create_stream_info (type);
-
-    /*
-     * FIXME: The tags aren't available yet, will only be updated later.
-     * Should (eventually) remove this code for fetching tags.
-     */
-    g_signal_emit_by_name (G_OBJECT (self->priv->playbin), tag_type, i, &tags);
-    if (tags) {
-      update_stream_info (minfo, type, tags, i);
-      temp = gst_tag_list_merge (temp, tags, GST_TAG_MERGE_REPLACE);
-      gst_tag_list_unref (tags);
-    } /* if tags */
 
     g_ptr_array_add ((*info)->array, minfo);
     i++;
   } /* while */
 
   (*info)->tags = temp;
-
-  emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
 }
 
 static void
