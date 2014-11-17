@@ -22,5 +22,6 @@
 #define __PLAYER_H__
 
 #include <gst/player/gstplayer.h>
+#include <gst/player/gstplayer-media-info.h>
 
 #endif /* __PLAYER_H__ */

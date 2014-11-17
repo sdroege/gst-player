@@ -22,6 +22,7 @@
 #define __GST_PLAYER_H__
 
 #include <gst/gst.h>
+#include "gstplayer-media-info.h"
 
 G_BEGIN_DECLS
 
@@ -86,7 +87,13 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
+GstPlayerMediaInfo * gst_player_get_audio_info        (GstPlayer    * player);
+GstPlayerMediaInfo * gst_player_get_video_info        (GstPlayer    * player);
+GstPlayerMediaInfo * gst_player_get_text_info         (GstPlayer    * player);
 
+gboolean    gst_player_media_has_audio                (GstPlayer * player);
+gboolean    gst_player_media_has_video                (GstPlayer * player);
+gboolean    gst_player_media_has_text                 (GstPlayer * player);
 
 GQuark       gst_player_error_quark                   (void);
 #define      GST_PLAYER_ERROR                         gst_player_error_quark ()
