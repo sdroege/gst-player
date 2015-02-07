@@ -199,8 +199,7 @@ gst_player_class_init (GstPlayerClass * klass)
   param_specs[PROP_PIPELINE] =
       g_param_spec_object ("pipeline", "Pipeline",
       "GStreamer pipeline that is used",
-      GST_TYPE_ELEMENT,
-      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      GST_TYPE_ELEMENT, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, param_specs);
 
