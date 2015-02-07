@@ -1355,3 +1355,15 @@ gst_player_error_get_type (void)
 
   return (GType) id;
 }
+
+const gchar *
+gst_player_error_get_name (GstPlayerError error)
+{
+  switch (error) {
+    case GST_PLAYER_ERROR_FAILED:
+      return "failed";
+  }
+
+  g_assert_not_reached ();
+  return NULL;
+}

@@ -34,6 +34,8 @@ typedef enum {
   GST_PLAYER_ERROR_FAILED = 0
 } GstPlayerError;
 
+const gchar *gst_player_error_get_name                (GstPlayerError error);
+
 typedef struct _GstPlayer GstPlayer;
 typedef struct _GstPlayerClass GstPlayerClass;
 typedef struct _GstPlayerPrivate GstPlayerPrivate;
