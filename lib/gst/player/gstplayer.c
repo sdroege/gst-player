@@ -1335,3 +1335,23 @@ gst_player_get_pipeline (GstPlayer * self)
 
   return val;
 }
+
+#define C_ENUM(v) ((gint) v)
+#define C_FLAGS(v) ((guint) v)
+
+GType
+gst_player_error_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_PLAYER_ERROR_FAILED), "GST_PLAYER_ERROR_FAILED", "failed"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstPlayerError", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}

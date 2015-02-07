@@ -25,6 +25,15 @@
 
 G_BEGIN_DECLS
 
+GQuark       gst_player_error_quark                   (void);
+GType        gst_player_error_get_type                (void);
+#define      GST_PLAYER_ERROR                         (gst_player_error_quark ())
+#define      GST_TYPE_PLAYER_ERROR                    (gst_player_error_get_type ())
+
+typedef enum {
+  GST_PLAYER_ERROR_FAILED = 0
+} GstPlayerError;
+
 typedef struct _GstPlayer GstPlayer;
 typedef struct _GstPlayerClass GstPlayerClass;
 typedef struct _GstPlayerPrivate GstPlayerPrivate;
@@ -86,14 +95,6 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
-
-
-GQuark       gst_player_error_quark                   (void);
-#define      GST_PLAYER_ERROR                         gst_player_error_quark ()
-
-typedef enum {
-  GST_PLAYER_ERROR_FAILED = 0
-} GstPlayerError;
 
 G_END_DECLS
 
