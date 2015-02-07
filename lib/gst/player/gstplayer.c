@@ -104,6 +104,7 @@ struct _GstPlayerPrivate
   guintptr window_handle;
 
   GstElement *playbin;
+  GstBus *bus;
   GstState target_state, current_state;
   gboolean is_live;
   GSource *tick_source;
@@ -1045,7 +1046,7 @@ gst_player_main (gpointer data)
 
   self->priv->playbin = gst_element_factory_make ("playbin", "playbin");
 
-  bus = gst_element_get_bus (self->priv->playbin);
+  self->priv->bus = bus = gst_element_get_bus (self->priv->playbin);
   bus_source = gst_bus_create_watch (bus);
   g_source_set_callback (bus_source, (GSourceFunc) gst_bus_async_signal_func,
       NULL, NULL);
@@ -1217,7 +1218,9 @@ gst_player_stop_internal (gpointer user_data)
   tick_cb (self);
   remove_tick_source (self);
 
+  gst_bus_set_flushing (self->priv->bus, TRUE);
   gst_element_set_state (self->priv->playbin, GST_STATE_READY);
+  gst_bus_set_flushing (self->priv->bus, FALSE);
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
 
