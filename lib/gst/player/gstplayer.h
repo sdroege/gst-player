@@ -1,6 +1,6 @@
 /* GStreamer
  *
- * Copyright (C) 2014 Sebastian Dröge <sebastian@centricular.com>
+ * Copyright (C) 2014-2015 Sebastian Dröge <sebastian@centricular.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +24,19 @@
 #include <gst/gst.h>
 
 G_BEGIN_DECLS
+
+GType        gst_player_state_get_type                (void);
+#define      GST_TYPE_PLAYER_STATE                    (gst_player_state_get_type ())
+
+typedef enum
+{
+  GST_PLAYER_STATE_STOPPED,
+  GST_PLAYER_STATE_BUFFERING,
+  GST_PLAYER_STATE_PAUSED,
+  GST_PLAYER_STATE_PLAYING
+} GstPlayerState;
+
+const gchar *gst_player_state_get_name                (GstPlayerState state);
 
 GQuark       gst_player_error_quark                   (void);
 GType        gst_player_error_get_type                (void);
