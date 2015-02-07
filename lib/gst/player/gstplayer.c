@@ -1291,6 +1291,13 @@ gst_player_set_mute (GstPlayer * self, gboolean val)
   g_object_set (self, "mute", val, NULL);
 }
 
+/**
+ * gst_player_get_window_handle:
+ * @player: #GstPlayer instance
+ *
+ * Returns: (transfer none): The currently set, platform specific window
+ * handle
+ */
 gpointer
 gst_player_get_window_handle (GstPlayer * self)
 {
@@ -1311,6 +1318,12 @@ gst_player_set_window_handle (GstPlayer * self, gpointer val)
   g_object_set (self, "window-handle", val, NULL);
 }
 
+/**
+ * gst_player_get_pipeline:
+ * @player: #GstPlayer instance
+ *
+ * Returns: (transfer full): The internal playbin instance
+ */
 GstElement *
 gst_player_get_pipeline (GstPlayer * self)
 {
