@@ -135,6 +135,7 @@ static gpointer gst_player_main (gpointer data);
 
 static void gst_player_seek_internal_locked (GstPlayer * self);
 static gboolean gst_player_stop_internal (gpointer user_data);
+static void change_state (GstPlayer * self, GstPlayerState state);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -732,6 +733,8 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
     GST_DEBUG_OBJECT (self, "Buffering finished - staying PAUSED");
     change_state (self, GST_PLAYER_STATE_PAUSED);
+  } else {
+    g_mutex_unlock (&self->priv->lock);
   }
 }
 
@@ -963,6 +966,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
         } else if (self->priv->buffering == 100) {
           change_state (self, GST_PLAYER_STATE_PAUSED);
         }
+      } else {
+        g_mutex_unlock (&self->priv->lock);
       }
     } else if (new_state == GST_STATE_PLAYING
         && pending_state == GST_STATE_VOID_PENDING) {
@@ -973,6 +978,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
         add_tick_source (self);
         change_state (self, GST_PLAYER_STATE_PLAYING);
       }
+    } else if (new_state == GST_STATE_READY && old_state > GST_STATE_READY) {
+      change_state (self, GST_PLAYER_STATE_STOPPED);
     } else {
       /* Otherwise we neither reached PLAYING nor PAUSED, so must
        * wait for something to happen... i.e. are BUFFERING now */
@@ -1218,6 +1225,8 @@ gst_player_stop_internal (gpointer user_data)
   tick_cb (self);
   remove_tick_source (self);
 
+  self->priv->target_state = GST_STATE_NULL;
+  self->priv->current_state = GST_STATE_READY;
   gst_bus_set_flushing (self->priv->bus, TRUE);
   gst_element_set_state (self->priv->playbin, GST_STATE_READY);
   gst_bus_set_flushing (self->priv->bus, FALSE);
@@ -1269,6 +1278,7 @@ gst_player_seek_internal_locked (GstPlayer * self)
     if (state_ret == GST_STATE_CHANGE_FAILURE) {
       emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
               "Failed to seek"));
+      g_mutex_lock (&self->priv->lock);
       return;
     }
     g_mutex_lock (&self->priv->lock);
