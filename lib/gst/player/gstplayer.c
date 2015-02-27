@@ -1403,18 +1403,6 @@ gst_player_set_uri (GstPlayer * self, const gchar * val)
   g_object_set (self, "uri", val, NULL);
 }
 
-gboolean
-gst_player_is_playing (GstPlayer * self)
-{
-  gboolean val;
-
-  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
-
-  g_object_get (self, "is-playing", &val, NULL);
-
-  return val;
-}
-
 GstClockTime
 gst_player_get_position (GstPlayer * self)
 {

@@ -92,8 +92,6 @@ gchar *      gst_player_get_uri                       (GstPlayer    * player);
 void         gst_player_set_uri                       (GstPlayer    * player,
                                                        const gchar  * uri);
 
-gboolean     gst_player_is_playing                    (GstPlayer    * player);
-
 GstClockTime gst_player_get_position                  (GstPlayer    * player);
 GstClockTime gst_player_get_duration                  (GstPlayer    * player);
 
