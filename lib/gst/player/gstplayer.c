@@ -106,7 +106,7 @@ struct _GstPlayerPrivate
   GstElement *playbin;
   GstBus *bus;
   GstState target_state, current_state;
-  gboolean is_live;
+  gboolean is_live, is_eos;
   GSource *tick_source, *ready_timeout_source;
 
   GstPlayerState app_state;
@@ -645,6 +645,7 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_NULL;
   self->priv->is_live = FALSE;
+  self->priv->is_eos = FALSE;
   gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
@@ -686,6 +687,7 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   }
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
+  self->priv->is_eos = TRUE;
 }
 
 typedef struct
@@ -1124,6 +1126,8 @@ gst_player_main (gpointer data)
   self->priv->current_state = GST_STATE_NULL;
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
+  self->priv->is_eos = FALSE;
+  self->priv->is_live = FALSE;
 
   GST_TRACE_OBJECT (self, "Starting main loop");
   g_main_loop_run (self->priv->loop);
@@ -1198,7 +1202,7 @@ gst_player_play_internal (gpointer user_data)
 
   remove_ready_timeout_source (self);
   self->priv->target_state = GST_STATE_PLAYING;
-  if (self->priv->current_state >= GST_STATE_PAUSED) {
+  if (self->priv->current_state >= GST_STATE_PAUSED && !self->priv->is_eos) {
     state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
   } else {
     state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
@@ -1215,6 +1219,21 @@ gst_player_play_internal (gpointer user_data)
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
     self->priv->is_live = TRUE;
     GST_DEBUG_OBJECT (self, "Pipeline is live");
+  }
+
+  if (self->priv->is_eos) {
+    gboolean ret;
+
+    GST_DEBUG_OBJECT (self, "Was EOS, seeking to beginning");
+    self->priv->is_eos = FALSE;
+    ret =
+        gst_element_seek_simple (self->priv->playbin, GST_FORMAT_TIME,
+        GST_SEEK_FLAG_FLUSH, 0);
+    if (!ret) {
+      GST_ERROR_OBJECT (self, "Seek to beginning failed");
+      gst_element_set_state (self->priv->playbin, GST_STATE_READY);
+      gst_player_play_internal (self);
+    }
   }
 
   return G_SOURCE_REMOVE;
@@ -1257,6 +1276,21 @@ gst_player_pause_internal (gpointer user_data)
     GST_DEBUG_OBJECT (self, "Pipeline is live");
   }
 
+  if (self->priv->is_eos) {
+    gboolean ret;
+
+    GST_DEBUG_OBJECT (self, "Was EOS, seeking to beginning");
+    self->priv->is_eos = FALSE;
+    ret =
+        gst_element_seek_simple (self->priv->playbin, GST_FORMAT_TIME,
+        GST_SEEK_FLAG_FLUSH, 0);
+    if (!ret) {
+      GST_ERROR_OBJECT (self, "Seek to beginning failed");
+      gst_element_set_state (self->priv->playbin, GST_STATE_READY);
+      gst_player_pause_internal (self);
+    }
+  }
+
   return G_SOURCE_REMOVE;
 }
 
@@ -1283,6 +1317,7 @@ gst_player_stop_internal (gpointer user_data)
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_READY;
   self->priv->is_live = FALSE;
+  self->priv->is_eos = FALSE;
   gst_bus_set_flushing (self->priv->bus, TRUE);
   gst_element_set_state (self->priv->playbin, GST_STATE_READY);
   gst_bus_set_flushing (self->priv->bus, FALSE);
@@ -1351,6 +1386,7 @@ gst_player_seek_internal_locked (GstPlayer * self)
       GST_TIME_ARGS (position));
 
   remove_tick_source (self);
+  self->priv->is_eos = FALSE;
 
   ret =
       gst_element_seek_simple (self->priv->playbin, GST_FORMAT_TIME,
