@@ -633,6 +633,8 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   g_free (full_message);
   g_free (message);
 
+  remove_tick_source (self);
+
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_NULL;
   self->priv->is_live = FALSE;
@@ -668,6 +670,7 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GST_DEBUG_OBJECT (self, "End of stream");
 
   tick_cb (self);
+  remove_tick_source (self);
 
   if (self->priv->dispatch_to_main_context) {
     g_main_context_invoke (self->priv->application_context, eos_dispatch, self);
@@ -965,6 +968,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
     if (new_state == GST_STATE_PAUSED
         && pending_state == GST_STATE_VOID_PENDING) {
+      remove_tick_source (self);
+
       g_mutex_lock (&self->priv->lock);
       if (self->priv->seek_pending) {
         self->priv->seek_pending = FALSE;
