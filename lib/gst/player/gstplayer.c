@@ -107,7 +107,7 @@ struct _GstPlayerPrivate
   GstBus *bus;
   GstState target_state, current_state;
   gboolean is_live;
-  GSource *tick_source;
+  GSource *tick_source, *ready_timeout_source;
 
   GstPlayerState app_state;
   gint buffering;
@@ -519,6 +519,38 @@ remove_tick_source (GstPlayer * self)
   self->priv->tick_source = NULL;
 }
 
+#if 0
+static gboolean
+ready_timeout_cb (gpointer user_data)
+{
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+add_ready_timeout_source (GstPlayer * self)
+{
+  if (self->priv->ready_timeout_source)
+    return;
+
+  self->priv->ready_timeout_source = g_timeout_source_new_seconds (60);
+  g_source_set_callback (self->priv->ready_timeout_source, (GSourceFunc) ready_timeout_cb, self,
+      NULL);
+  g_source_attach (self->priv->ready_timeout_source, self->priv->context);
+}
+
+static void
+remove_ready_timeout_source (GstPlayer * self)
+{
+  if (!self->priv->ready_timeout_source)
+    return;
+
+  g_source_destroy (self->priv->ready_timeout_source);
+  g_source_unref (self->priv->ready_timeout_source);
+  self->priv->ready_timeout_source = NULL;
+}
+#endif
+
 typedef struct
 {
   GstPlayer *player;
@@ -603,6 +635,7 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_NULL;
+  self->priv->is_live = FALSE;
   gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
@@ -1157,6 +1190,11 @@ gst_player_play_internal (gpointer user_data)
     state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
   }
 
+  if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
+    self->priv->is_live = TRUE;
+    GST_DEBUG_OBJECT (self, "Pipeline is live");
+  }
+
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
             "Failed to play"));
@@ -1227,6 +1265,7 @@ gst_player_stop_internal (gpointer user_data)
 
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_READY;
+  self->priv->is_live = FALSE;
   gst_bus_set_flushing (self->priv->bus, TRUE);
   gst_element_set_state (self->priv->playbin, GST_STATE_READY);
   gst_bus_set_flushing (self->priv->bus, FALSE);
