@@ -519,10 +519,17 @@ remove_tick_source (GstPlayer * self)
   self->priv->tick_source = NULL;
 }
 
-#if 0
 static gboolean
 ready_timeout_cb (gpointer user_data)
 {
+  GstPlayer *self = user_data;
+
+  if (self->priv->target_state <= GST_STATE_READY) {
+    GST_DEBUG_OBJECT (self, "Setting pipeline to NULL state");
+    self->priv->target_state = GST_STATE_NULL;
+    self->priv->current_state = GST_STATE_NULL;
+    gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
+  }
 
   return G_SOURCE_REMOVE;
 }
@@ -534,8 +541,8 @@ add_ready_timeout_source (GstPlayer * self)
     return;
 
   self->priv->ready_timeout_source = g_timeout_source_new_seconds (60);
-  g_source_set_callback (self->priv->ready_timeout_source, (GSourceFunc) ready_timeout_cb, self,
-      NULL);
+  g_source_set_callback (self->priv->ready_timeout_source,
+      (GSourceFunc) ready_timeout_cb, self, NULL);
   g_source_attach (self->priv->ready_timeout_source, self->priv->context);
 }
 
@@ -549,7 +556,6 @@ remove_ready_timeout_source (GstPlayer * self)
   g_source_unref (self->priv->ready_timeout_source);
   self->priv->ready_timeout_source = NULL;
 }
-#endif
 
 typedef struct
 {
@@ -634,6 +640,7 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   g_free (message);
 
   remove_tick_source (self);
+  remove_ready_timeout_source (self);
 
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_NULL;
@@ -1130,6 +1137,7 @@ gst_player_main (gpointer data)
   gst_object_unref (bus);
 
   remove_tick_source (self);
+  remove_ready_timeout_source (self);
 
   if (self->priv->seek_source)
     g_source_unref (self->priv->seek_source);
@@ -1188,6 +1196,7 @@ gst_player_play_internal (gpointer user_data)
   }
   g_mutex_unlock (&self->priv->lock);
 
+  remove_ready_timeout_source (self);
   self->priv->target_state = GST_STATE_PLAYING;
   if (self->priv->current_state >= GST_STATE_PAUSED) {
     state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
@@ -1236,6 +1245,7 @@ gst_player_pause_internal (gpointer user_data)
 
   tick_cb (self);
   remove_tick_source (self);
+  remove_ready_timeout_source (self);
 
   self->priv->target_state = GST_STATE_PAUSED;
   state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
@@ -1267,6 +1277,8 @@ gst_player_stop_internal (gpointer user_data)
 
   tick_cb (self);
   remove_tick_source (self);
+
+  add_ready_timeout_source (self);
 
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_READY;
