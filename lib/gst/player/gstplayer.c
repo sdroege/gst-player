@@ -277,7 +277,7 @@ gst_player_set_uri_internal (gpointer user_data)
 
   g_mutex_unlock (&self->priv->lock);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -394,7 +394,7 @@ main_loop_running_cb (gpointer user_data)
   g_cond_signal (&self->priv->cond);
   g_mutex_unlock (&self->priv->lock);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 typedef struct
@@ -410,7 +410,7 @@ state_changed_dispatch (gpointer user_data)
 
   g_signal_emit (data->player, signals[SIGNAL_STATE_CHANGED], 0, data->state);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -459,7 +459,7 @@ position_updated_dispatch (gpointer user_data)
   g_object_notify_by_pspec (G_OBJECT (data->player),
       param_specs[PROP_POSITION]);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -493,7 +493,7 @@ tick_cb (gpointer user_data)
     }
   }
 
-  return TRUE;
+  return G_SOURCE_CONTINUE;
 }
 
 static void
@@ -564,7 +564,7 @@ error_dispatch (gpointer user_data)
 
   g_signal_emit (data->player, signals[SIGNAL_ERROR], 0, data->err);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -659,7 +659,7 @@ eos_dispatch (gpointer user_data)
 {
   g_signal_emit (user_data, signals[SIGNAL_END_OF_STREAM], 0);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -694,7 +694,7 @@ buffering_dispatch (gpointer user_data)
 
   g_signal_emit (data->player, signals[SIGNAL_BUFFERING], 0, data->percent);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -807,7 +807,7 @@ video_dimensions_changed_dispatch (gpointer user_data)
   g_signal_emit (data->player, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
       data->width, data->height);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -894,7 +894,7 @@ duration_changed_dispatch (gpointer user_data)
   g_object_notify_by_pspec (G_OBJECT (data->player),
       param_specs[PROP_DURATION]);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -1184,7 +1184,7 @@ gst_player_play_internal (gpointer user_data)
   g_mutex_lock (&self->priv->lock);
   if (!self->priv->uri) {
     g_mutex_unlock (&self->priv->lock);
-    return FALSE;
+    return G_SOURCE_REMOVE;
   }
   g_mutex_unlock (&self->priv->lock);
 
@@ -1208,7 +1208,7 @@ gst_player_play_internal (gpointer user_data)
     GST_DEBUG_OBJECT (self, "Pipeline is live");
   }
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 void
@@ -1230,7 +1230,7 @@ gst_player_pause_internal (gpointer user_data)
   g_mutex_lock (&self->priv->lock);
   if (!self->priv->uri) {
     g_mutex_unlock (&self->priv->lock);
-    return FALSE;
+    return G_SOURCE_REMOVE;
   }
   g_mutex_unlock (&self->priv->lock);
 
@@ -1247,7 +1247,7 @@ gst_player_pause_internal (gpointer user_data)
     GST_DEBUG_OBJECT (self, "Pipeline is live");
   }
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 void
@@ -1288,7 +1288,7 @@ gst_player_stop_internal (gpointer user_data)
   self->priv->last_seek_time = GST_CLOCK_TIME_NONE;
   g_mutex_unlock (&self->priv->lock);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 void
@@ -1360,7 +1360,7 @@ gst_player_seek_internal (gpointer user_data)
   gst_player_seek_internal_locked (self);
   g_mutex_unlock (&self->priv->lock);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 void
