@@ -430,7 +430,9 @@ change_state (GstPlayer * self, GstPlayerState state)
       gst_player_state_get_name (state));
   self->priv->app_state = state;
 
-  if (self->priv->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_STATE_CHANGED], 0, NULL, NULL, NULL) != 0) {
     StateChangedSignalData *data = g_slice_new (StateChangedSignalData);
 
     data->player = self;
@@ -479,7 +481,9 @@ tick_cb (gpointer user_data)
     GST_LOG_OBJECT (self, "Position %" GST_TIME_FORMAT,
         GST_TIME_ARGS (position));
 
-    if (self->priv->dispatch_to_main_context) {
+    if (self->priv->dispatch_to_main_context
+        && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+            signals[SIGNAL_POSITION_UPDATED], 0, NULL, NULL, NULL) != 0) {
       PositionUpdatedSignalData *data = g_slice_new (PositionUpdatedSignalData);
 
       data->player = self;
@@ -586,7 +590,9 @@ emit_error (GstPlayer * self, GError * err)
   GST_ERROR_OBJECT (self, "Error: %s (%s, %d)", err->message,
       g_quark_to_string (err->domain), err->code);
 
-  if (self->priv->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_ERROR], 0, NULL, NULL, NULL) != 0) {
     ErrorSignalData *data = g_slice_new (ErrorSignalData);
 
     data->player = self;
@@ -680,7 +686,9 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   tick_cb (self);
   remove_tick_source (self);
 
-  if (self->priv->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_END_OF_STREAM], 0, NULL, NULL, NULL) != 0) {
     g_main_context_invoke (self->priv->application_context, eos_dispatch, self);
   } else {
     g_signal_emit (self, signals[SIGNAL_END_OF_STREAM], 0);
@@ -740,7 +748,9 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   }
 
   if (self->priv->buffering != percent) {
-    if (self->priv->dispatch_to_main_context) {
+    if (self->priv->dispatch_to_main_context
+        && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+            signals[SIGNAL_BUFFERING], 0, NULL, NULL, NULL) != 0) {
       BufferingSignalData *data = g_slice_new (BufferingSignalData);
 
       data->player = self;
@@ -863,7 +873,9 @@ check_video_dimensions_changed (GstPlayer * self)
   gst_object_unref (video_sink);
 
 out:
-  if (self->priv->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0, NULL, NULL, NULL) != 0) {
     VideoDimensionsChangedSignalData *data =
         g_slice_new (VideoDimensionsChangedSignalData);
 
@@ -918,7 +930,9 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
   GST_DEBUG_OBJECT (self, "Duration changed %" GST_TIME_FORMAT,
       GST_TIME_ARGS (duration));
 
-  if (self->priv->dispatch_to_main_context) {
+  if (self->priv->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_DURATION_CHANGED], 0, NULL, NULL, NULL) != 0) {
     DurationChangedSignalData *data = g_slice_new (DurationChangedSignalData);
 
     data->player = self;
