@@ -414,12 +414,6 @@ state_changed_dispatch (gpointer user_data)
 }
 
 static void
-free_state_changed_signal_data (StateChangedSignalData * data)
-{
-  g_slice_free (StateChangedSignalData, data);
-}
-
-static void
 change_state (GstPlayer * self, GstPlayerState state)
 {
   if (state == self->priv->app_state)
@@ -433,13 +427,13 @@ change_state (GstPlayer * self, GstPlayerState state)
   if (self->priv->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_STATE_CHANGED], 0, NULL, NULL, NULL) != 0) {
-    StateChangedSignalData *data = g_slice_new (StateChangedSignalData);
+    StateChangedSignalData *data = g_new (StateChangedSignalData, 1);
 
     data->player = self;
     data->state = state;
     g_main_context_invoke_full (self->priv->application_context,
         G_PRIORITY_DEFAULT, state_changed_dispatch, data,
-        (GDestroyNotify) free_state_changed_signal_data);
+        (GDestroyNotify) g_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_STATE_CHANGED], 0, state);
   }
@@ -464,12 +458,6 @@ position_updated_dispatch (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
-static void
-free_position_updated_signal_data (PositionUpdatedSignalData * data)
-{
-  g_slice_free (PositionUpdatedSignalData, data);
-}
-
 static gboolean
 tick_cb (gpointer user_data)
 {
@@ -484,13 +472,13 @@ tick_cb (gpointer user_data)
     if (self->priv->dispatch_to_main_context
         && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
             signals[SIGNAL_POSITION_UPDATED], 0, NULL, NULL, NULL) != 0) {
-      PositionUpdatedSignalData *data = g_slice_new (PositionUpdatedSignalData);
+      PositionUpdatedSignalData *data = g_new (PositionUpdatedSignalData, 1);
 
       data->player = self;
       data->position = position;
       g_main_context_invoke_full (self->priv->application_context,
           G_PRIORITY_DEFAULT, position_updated_dispatch, data,
-          (GDestroyNotify) free_position_updated_signal_data);
+          (GDestroyNotify) g_free);
     } else {
       g_signal_emit (self, signals[SIGNAL_POSITION_UPDATED], 0, position);
       g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_POSITION]);
@@ -581,7 +569,7 @@ static void
 free_error_signal_data (ErrorSignalData * data)
 {
   g_clear_error (&data->err);
-  g_slice_free (ErrorSignalData, data);
+  g_free (data);
 }
 
 static void
@@ -593,7 +581,7 @@ emit_error (GstPlayer * self, GError * err)
   if (self->priv->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_ERROR], 0, NULL, NULL, NULL) != 0) {
-    ErrorSignalData *data = g_slice_new (ErrorSignalData);
+    ErrorSignalData *data = g_new (ErrorSignalData, 1);
 
     data->player = self;
     data->err = g_error_copy (err);
@@ -715,12 +703,6 @@ buffering_dispatch (gpointer user_data)
 }
 
 static void
-free_buffering_signal_data (BufferingSignalData * data)
-{
-  g_slice_free (BufferingSignalData, data);
-}
-
-static void
 buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
@@ -751,13 +733,13 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
     if (self->priv->dispatch_to_main_context
         && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
             signals[SIGNAL_BUFFERING], 0, NULL, NULL, NULL) != 0) {
-      BufferingSignalData *data = g_slice_new (BufferingSignalData);
+      BufferingSignalData *data = g_new (BufferingSignalData, 1);
 
       data->player = self;
       data->percent = percent;
       g_main_context_invoke_full (self->priv->application_context,
           G_PRIORITY_DEFAULT, buffering_dispatch, data,
-          (GDestroyNotify) free_buffering_signal_data);
+          (GDestroyNotify) g_free);
     } else {
       g_signal_emit (self, signals[SIGNAL_BUFFERING], 0, percent);
     }
@@ -830,13 +812,6 @@ video_dimensions_changed_dispatch (gpointer user_data)
 }
 
 static void
-free_video_dimensions_changed_signal_data (VideoDimensionsChangedSignalData *
-    data)
-{
-  g_slice_free (VideoDimensionsChangedSignalData, data);
-}
-
-static void
 check_video_dimensions_changed (GstPlayer * self)
 {
   GstElement *video_sink;
@@ -877,14 +852,14 @@ out:
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0, NULL, NULL, NULL) != 0) {
     VideoDimensionsChangedSignalData *data =
-        g_slice_new (VideoDimensionsChangedSignalData);
+        g_new (VideoDimensionsChangedSignalData, 1);
 
     data->player = self;
     data->width = width;
     data->height = height;
     g_main_context_invoke_full (self->priv->application_context,
         G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
-        (GDestroyNotify) free_video_dimensions_changed_signal_data);
+        (GDestroyNotify) g_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
         width, height);
@@ -919,12 +894,6 @@ duration_changed_dispatch (gpointer user_data)
 }
 
 static void
-free_duration_changed_signal_data (DurationChangedSignalData * data)
-{
-  g_slice_free (DurationChangedSignalData, data);
-}
-
-static void
 emit_duration_changed (GstPlayer * self, GstClockTime duration)
 {
   GST_DEBUG_OBJECT (self, "Duration changed %" GST_TIME_FORMAT,
@@ -933,13 +902,13 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
   if (self->priv->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_DURATION_CHANGED], 0, NULL, NULL, NULL) != 0) {
-    DurationChangedSignalData *data = g_slice_new (DurationChangedSignalData);
+    DurationChangedSignalData *data = g_new (DurationChangedSignalData, 1);
 
     data->player = self;
     data->duration = duration;
     g_main_context_invoke_full (self->priv->application_context,
         G_PRIORITY_DEFAULT, duration_changed_dispatch, data,
-        (GDestroyNotify) free_duration_changed_signal_data);
+        (GDestroyNotify) g_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_DURATION_CHANGED], 0, duration);
     g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_DURATION]);
