@@ -135,6 +135,8 @@ static gpointer gst_player_main (gpointer data);
 
 static void gst_player_seek_internal_locked (GstPlayer * self);
 static gboolean gst_player_stop_internal (gpointer user_data);
+static gboolean gst_player_pause_internal (gpointer user_data);
+static gboolean gst_player_play_internal (gpointer user_data);
 static void change_state (GstPlayer * self, GstPlayerState state);
 
 static void
@@ -1060,6 +1062,65 @@ request_state_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
             gst_element_state_get_name (state)));
 }
 
+static void
+element_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+{
+  GstPlayer *self = GST_PLAYER (user_data);
+  const GstStructure *s;
+
+  s = gst_message_get_structure (msg);
+  if (gst_structure_has_name (s, "redirect")) {
+    const gchar *new_location;
+
+    new_location = gst_structure_get_string (s, "new-location");
+    if (!new_location) {
+      const GValue *locations_list, *location_val;
+      guint i, size;
+
+      locations_list = gst_structure_get_value (s, "locations");
+      size = gst_value_list_get_size (locations_list);
+      for (i = 0; i < size; ++i) {
+        const GstStructure *location_s;
+
+        location_val = gst_value_list_get_value (locations_list, i);
+        if (!GST_VALUE_HOLDS_STRUCTURE (location_val))
+          continue;
+
+        location_s = (const GstStructure *) g_value_get_boxed (location_val);
+        if (!gst_structure_has_name (location_s, "redirect"))
+          continue;
+
+        new_location = gst_structure_get_string (location_s, "new-location");
+        if (new_location)
+          break;
+      }
+    }
+
+    if (new_location) {
+      GstState target_state;
+
+      GST_DEBUG_OBJECT (self, "Redirect to '%s'", new_location);
+
+      /* Remember target state and restore after setting the URI */
+      target_state = self->priv->target_state;
+
+      g_mutex_lock (&self->priv->lock);
+      if (self->priv->uri)
+        g_free (self->priv->uri);
+
+      self->priv->uri = g_strdup (new_location);
+      g_mutex_unlock (&self->priv->lock);
+
+      gst_player_set_uri_internal (self);
+
+      if (target_state == GST_STATE_PAUSED)
+        gst_player_pause_internal (self);
+      else if (target_state == GST_STATE_PLAYING)
+        gst_player_play_internal (self);
+    }
+  }
+}
+
 static gpointer
 gst_player_main (gpointer data)
 {
@@ -1104,6 +1165,8 @@ gst_player_main (gpointer data)
       G_CALLBACK (latency_cb), self);
   g_signal_connect (G_OBJECT (bus), "message::request-state",
       G_CALLBACK (request_state_cb), self);
+  g_signal_connect (G_OBJECT (bus), "message::element",
+      G_CALLBACK (element_cb), self);
 
   self->priv->target_state = GST_STATE_NULL;
   self->priv->current_state = GST_STATE_NULL;
