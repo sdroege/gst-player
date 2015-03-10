@@ -14,8 +14,6 @@ gst_player_get_dispatch_to_main_context
 gst_player_set_uri
 gst_player_get_uri
 
-gst_player_is_playing
-
 gst_player_get_duration
 gst_player_get_position
 
@@ -27,8 +25,14 @@ gst_player_get_mute
 gst_player_set_window_handle
 gst_player_get_window_handle
 
+gst_player_get_pipeline
+
+GstPlayerState
+gst_player_state_get_name
+
 GST_PLAYER_ERROR
 GstPlayerError
+gst_player_error_get_name
 <SUBSECTION Standard>
 GST_IS_PLAYER
 GST_IS_PLAYER_CLASS
@@ -42,6 +46,11 @@ GstPlayerPrivate
 GstPlayerClass
 gst_player_get_type
 
+GST_TYPE_PLAYER_ERROR
 gst_player_error_quark
+gst_player_error_get_type
+
+GST_TYPE_PLAYER_STATE
+gst_player_state_get_type
 </SECTION>
 
