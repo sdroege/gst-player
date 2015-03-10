@@ -255,11 +255,21 @@ static GstPlayer *
 test_player_new (TestPlayerState * state)
 {
   GstPlayer *player;
+  GstElement *playbin, *fakesink;
 
   player = gst_player_new ();
   fail_unless (player != NULL);
 
   test_player_state_reset (state);
+
+  playbin = gst_player_get_pipeline (player);
+  fakesink = gst_element_factory_make ("fakesink", "audio-sink");
+  g_object_set (fakesink, "sync", TRUE, NULL);
+  g_object_set (playbin, "audio-sink", fakesink, NULL);
+  fakesink = gst_element_factory_make ("fakesink", "video-sink");
+  g_object_set (fakesink, "sync", TRUE, NULL);
+  g_object_set (playbin, "video-sink", fakesink, NULL);
+  gst_object_unref (playbin);
 
   g_object_set (player, "dispatch-to-main-context", TRUE, NULL);
   g_signal_connect (player, "buffering", G_CALLBACK (buffering_cb), state);
