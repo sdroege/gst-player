@@ -595,6 +595,28 @@ emit_error (GstPlayer * self, GError * err)
   }
 
   g_error_free (err);
+
+  remove_tick_source (self);
+  remove_ready_timeout_source (self);
+
+  self->priv->target_state = GST_STATE_NULL;
+  self->priv->current_state = GST_STATE_NULL;
+  self->priv->is_live = FALSE;
+  self->priv->is_eos = FALSE;
+  gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
+  change_state (self, GST_PLAYER_STATE_STOPPED);
+  self->priv->buffering = 100;
+
+  g_mutex_lock (&self->priv->lock);
+  self->priv->seek_pending = FALSE;
+  if (self->priv->seek_source) {
+    g_source_destroy (self->priv->seek_source);
+    g_source_unref (self->priv->seek_source);
+    self->priv->seek_source = NULL;
+  }
+  self->priv->seek_position = GST_CLOCK_TIME_NONE;
+  self->priv->last_seek_time = GST_CLOCK_TIME_NONE;
+  g_mutex_unlock (&self->priv->lock);
 }
 
 static void
@@ -634,28 +656,6 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   g_free (name);
   g_free (full_message);
   g_free (message);
-
-  remove_tick_source (self);
-  remove_ready_timeout_source (self);
-
-  self->priv->target_state = GST_STATE_NULL;
-  self->priv->current_state = GST_STATE_NULL;
-  self->priv->is_live = FALSE;
-  self->priv->is_eos = FALSE;
-  gst_element_set_state (self->priv->playbin, GST_STATE_NULL);
-  change_state (self, GST_PLAYER_STATE_STOPPED);
-  self->priv->buffering = 100;
-
-  g_mutex_lock (&self->priv->lock);
-  self->priv->seek_pending = FALSE;
-  if (self->priv->seek_source) {
-    g_source_destroy (self->priv->seek_source);
-    g_source_unref (self->priv->seek_source);
-    self->priv->seek_source = NULL;
-  }
-  self->priv->seek_position = GST_CLOCK_TIME_NONE;
-  self->priv->last_seek_time = GST_CLOCK_TIME_NONE;
-  g_mutex_unlock (&self->priv->lock);
 }
 
 static gboolean
