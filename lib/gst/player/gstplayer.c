@@ -1262,6 +1262,7 @@ gst_player_play_internal (gpointer user_data)
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
             "Failed to play"));
+    return G_SOURCE_REMOVE;
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
     self->priv->is_live = TRUE;
     GST_DEBUG_OBJECT (self, "Pipeline is live");
@@ -1317,6 +1318,7 @@ gst_player_pause_internal (gpointer user_data)
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
             "Failed to pause"));
+    return G_SOURCE_REMOVE;
   } else if (state_ret == GST_STATE_CHANGE_NO_PREROLL) {
     self->priv->is_live = TRUE;
     GST_DEBUG_OBJECT (self, "Pipeline is live");
