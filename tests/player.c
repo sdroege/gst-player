@@ -18,6 +18,16 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/* TODO:
+ * - error (invalid URI), play after error
+ * - start with pause, go to playing
+ * - play, pause, play
+ * - set uri in play/pause
+ * - play/pause after eos
+ * - seek in play/pause/stopped, after eos, back to 0, after duration
+ * - http buffering
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
