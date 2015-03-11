@@ -1248,6 +1248,10 @@ gst_player_play_internal (gpointer user_data)
 
   remove_ready_timeout_source (self);
   self->priv->target_state = GST_STATE_PLAYING;
+
+  if (self->priv->current_state < GST_STATE_PAUSED)
+    change_state (self, GST_PLAYER_STATE_BUFFERING);
+
   if (self->priv->current_state >= GST_STATE_PAUSED && !self->priv->is_eos) {
     state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
   } else {
@@ -1314,6 +1318,10 @@ gst_player_pause_internal (gpointer user_data)
   remove_ready_timeout_source (self);
 
   self->priv->target_state = GST_STATE_PAUSED;
+
+  if (self->priv->current_state < GST_STATE_PAUSED)
+    change_state (self, GST_PLAYER_STATE_BUFFERING);
+
   state_ret = gst_element_set_state (self->priv->playbin, GST_STATE_PAUSED);
   if (state_ret == GST_STATE_CHANGE_FAILURE) {
     emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
