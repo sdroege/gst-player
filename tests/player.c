@@ -352,6 +352,7 @@ test_play_audio_video_eos_cb (GstPlayer * player, TestPlayerStateChange change,
       if (change == STATE_CHANGE_POSITION_UPDATED) {
         fail_unless (old_state->position <= new_state->position);
       } else {
+        fail_unless_equals_uint64 (old_state->position, old_state->duration);
         fail_unless_equals_int (change, STATE_CHANGE_END_OF_STREAM);
         new_state->test_data =
             GINT_TO_POINTER ((video ? 0x10 : 0x00) | (step + 1));
