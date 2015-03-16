@@ -44,7 +44,8 @@ GType        gst_player_error_get_type                (void);
 #define      GST_TYPE_PLAYER_ERROR                    (gst_player_error_get_type ())
 
 typedef enum {
-  GST_PLAYER_ERROR_FAILED = 0
+  GST_PLAYER_ERROR_FAILED = 0,
+  GST_PLAYER_ERROR_MISSING_PLUGIN
 } GstPlayerError;
 
 const gchar *gst_player_error_get_name                (GstPlayerError error);

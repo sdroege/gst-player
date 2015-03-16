@@ -47,6 +47,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <gst/pbutils/missing-plugins.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);
 #define GST_CAT_DEFAULT gst_player_debug
@@ -238,6 +239,7 @@ gst_player_class_init (GstPlayerClass * klass)
       g_signal_new ("video-dimensions-changed", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 2, G_TYPE_INT, G_TYPE_INT);
+
 }
 
 static void
@@ -654,6 +656,21 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   self->priv->seek_position = GST_CLOCK_TIME_NONE;
   self->priv->last_seek_time = GST_CLOCK_TIME_NONE;
   g_mutex_unlock (&self->priv->lock);
+}
+
+static void
+element_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+{
+  GstPlayer *self = GST_PLAYER (user_data);
+
+  if (gst_is_missing_plugin_message (msg)) {
+    gchar *desc;
+
+    desc = gst_missing_plugin_message_get_description (msg);
+    emit_error (self, g_error_new (GST_PLAYER_ERROR,
+        GST_PLAYER_ERROR_MISSING_PLUGIN, "Missing plugin '%s'", desc));
+    g_free (desc);
+  }
 }
 
 static gboolean
@@ -1089,6 +1106,8 @@ gst_player_main (gpointer data)
       NULL, NULL);
   g_source_attach (bus_source, self->priv->context);
 
+  g_signal_connect (G_OBJECT (bus), "message::element",
+      G_CALLBACK (element_cb), self);
   g_signal_connect (G_OBJECT (bus), "message::error", G_CALLBACK (error_cb),
       self);
   g_signal_connect (G_OBJECT (bus), "message::eos", G_CALLBACK (eos_cb), self);
@@ -1635,6 +1654,7 @@ gst_player_error_get_type (void)
   static gsize id = 0;
   static const GEnumValue values[] = {
     {C_ENUM (GST_PLAYER_ERROR_FAILED), "GST_PLAYER_ERROR_FAILED", "failed"},
+    {C_ENUM (GST_PLAYER_ERROR_MISSING_PLUGIN), "GST_PLAYER_ERROR_MISSING_PLUGIN", "missing-plugin"},
     {0, NULL, NULL}
   };
 
@@ -1652,6 +1672,8 @@ gst_player_error_get_name (GstPlayerError error)
   switch (error) {
     case GST_PLAYER_ERROR_FAILED:
       return "failed";
+    case GST_PLAYER_ERROR_MISSING_PLUGIN:
+      return "missing-plugin";
   }
 
   g_assert_not_reached ();
