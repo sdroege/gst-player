@@ -22,6 +22,7 @@
 #define __GST_PLAYER_H__
 
 #include <gst/gst.h>
+#include <gst/player/player-media-info.h>
 
 G_BEGIN_DECLS
 
@@ -108,6 +109,10 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
+
+gboolean     gst_player_set_stream                    (GstPlayer    * player,
+                                                       const GstPlayerStreamInfo
+                                                       *info);
 
 G_END_DECLS
 

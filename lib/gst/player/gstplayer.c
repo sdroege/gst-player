@@ -1241,6 +1241,52 @@ get_stream_info (GstPlayer *self, GType type, gint stream_id)
   return stream_info_new (self, type, stream_id);
 }
 
+gboolean
+gst_player_set_stream (GstPlayer *self, const GstPlayerStreamInfo *sinfo)
+{
+  gint stream_id, current;
+  GstPlayerMediaInfo  *media_info = self->priv->media_info;
+
+  stream_id = gst_player_stream_info_get_stream_id (sinfo);
+
+  if (GST_IS_PLAYER_SUBTITLE_INFO (sinfo)) {
+    g_object_set (self->priv->playbin, "current-text", stream_id, NULL);
+    g_object_get (self->priv->playbin, "current-text", &current, NULL);
+
+    if (stream_id != current)
+      return FALSE;
+
+    media_info->current_subtitle = get_stream_info (self,
+                                  GST_TYPE_PLAYER_SUBTITLE_INFO, current);
+  }
+
+  if (GST_IS_PLAYER_AUDIO_INFO (sinfo)) {
+    g_object_set (self->priv->playbin, "current-audio", stream_id, NULL);
+    g_object_get (self->priv->playbin, "current-audio", &current, NULL);
+
+    if (stream_id != current)
+      return FALSE;
+
+    media_info->current_audio = get_stream_info (self,
+                                  GST_TYPE_PLAYER_AUDIO_INFO, current);
+  }
+
+  if (GST_IS_PLAYER_VIDEO_INFO (sinfo)) {
+    g_object_set (self->priv->playbin, "current-video", stream_id, NULL);
+    g_object_get (self->priv->playbin, "current-video", &current, NULL);
+
+    if (stream_id != current)
+      return FALSE;
+
+    media_info->current_video = get_stream_info (self,
+                                  GST_TYPE_PLAYER_VIDEO_INFO, current);
+  }
+
+  emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
+
+  return TRUE;
+}
+
 static GstCaps*
 get_caps (GstPlayer *self, gint stream_id, GType type)
 {
