@@ -1,6 +1,6 @@
 /* GStreamer
  *
- * Copyright (C) 20155 Brijesh Singh <brijesh.ksingh@gmail.com>
+ * Copyright (C) 2015 Brijesh Singh <brijesh.ksingh@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,7 +19,7 @@
  */
 
 #ifndef __PLAYER_MEDIA_INFO_H__
-#define __PLAYER_H__
+#define __PLAYER_MEDIA_INFO_H__
 
 #include <gst/player/gstplayer-media-info.h>
 
