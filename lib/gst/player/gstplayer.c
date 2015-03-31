@@ -1241,50 +1241,48 @@ get_stream_info (GstPlayer *self, GType type, gint stream_id)
   return stream_info_new (self, type, stream_id);
 }
 
+static gboolean
+_gst_player_set_stream (GstPlayer *self, const gchar *type,
+  const GstPlayerStreamInfo *input, GstPlayerStreamInfo **output)
+{
+  gchar prop[15];
+  gint current, stream_id;
+
+  g_snprintf (prop, 15, "current-%s", type);
+  stream_id = gst_player_stream_info_get_stream_id (input);
+
+  g_object_set (self->priv->playbin, prop, stream_id, NULL);
+  g_object_get (self->priv->playbin, prop, &current, NULL);
+
+  if (stream_id != current)
+    return FALSE;
+
+  *output = get_stream_info (self, G_OBJECT_TYPE(input), current);
+
+  return TRUE;
+}
+
 gboolean
 gst_player_set_stream (GstPlayer *self, const GstPlayerStreamInfo *sinfo)
 {
-  gint stream_id, current;
-  GstPlayerMediaInfo  *media_info = self->priv->media_info;
+  gboolean ret = FALSE;
 
-  stream_id = gst_player_stream_info_get_stream_id (sinfo);
+  if (GST_IS_PLAYER_VIDEO_INFO (sinfo))
+    ret = _gst_player_set_stream (self, "video", sinfo,
+                &(self->priv->media_info->current_video));
 
-  if (GST_IS_PLAYER_SUBTITLE_INFO (sinfo)) {
-    g_object_set (self->priv->playbin, "current-text", stream_id, NULL);
-    g_object_get (self->priv->playbin, "current-text", &current, NULL);
+  if (GST_IS_PLAYER_AUDIO_INFO (sinfo))
+    ret = _gst_player_set_stream (self, "audio", sinfo,
+                &(self->priv->media_info->current_audio));
 
-    if (stream_id != current)
-      return FALSE;
+  if (GST_IS_PLAYER_SUBTITLE_INFO (sinfo))
+    ret = _gst_player_set_stream (self, "text", sinfo,
+                &(self->priv->media_info->current_subtitle));
 
-    media_info->current_subtitle = get_stream_info (self,
-                                  GST_TYPE_PLAYER_SUBTITLE_INFO, current);
-  }
+  if (ret)
+    emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
 
-  if (GST_IS_PLAYER_AUDIO_INFO (sinfo)) {
-    g_object_set (self->priv->playbin, "current-audio", stream_id, NULL);
-    g_object_get (self->priv->playbin, "current-audio", &current, NULL);
-
-    if (stream_id != current)
-      return FALSE;
-
-    media_info->current_audio = get_stream_info (self,
-                                  GST_TYPE_PLAYER_AUDIO_INFO, current);
-  }
-
-  if (GST_IS_PLAYER_VIDEO_INFO (sinfo)) {
-    g_object_set (self->priv->playbin, "current-video", stream_id, NULL);
-    g_object_get (self->priv->playbin, "current-video", &current, NULL);
-
-    if (stream_id != current)
-      return FALSE;
-
-    media_info->current_video = get_stream_info (self,
-                                  GST_TYPE_PLAYER_VIDEO_INFO, current);
-  }
-
-  emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
-
-  return TRUE;
+  return ret;
 }
 
 static GstCaps*
