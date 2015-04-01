@@ -69,7 +69,6 @@ enum {
   VIDEO_INFO_RESOLUTION,
   VIDEO_INFO_FRAMERATE,
   VIDEO_INFO_CODEC,
-  //VIDEO_INFO_TAGS,
   VIDEO_INFO_END,
   AUDIO_INFO_START,
   AUDIO_INFO_TYPE_NICK,
@@ -78,7 +77,6 @@ enum {
   AUDIO_INFO_CHANNELS,
   AUDIO_INFO_CODEC,
   AUDIO_INFO_LANGUAGE,
-  //AUDIO_INFO_TAGS,
   AUDIO_INFO_END,
   SUBTITLE_INFO_START,
   SUBTITLE_INFO_TYPE_NICK,
@@ -123,6 +121,72 @@ video_area_realize_cb (GtkWidget * widget, GtkPlay * play)
   g_object_set (play->player, "window-handle", (gpointer) window_handle, NULL);
 }
 
+typedef struct _tagsdata {
+  GtkTreeStore *tree;
+  GtkTreeIter parent;
+}TagsData;
+
+static void
+get_one_tag (const GstTagList *list, const gchar *tag, gpointer user_data)
+{
+  gint i, num;
+  gchar *buffer = NULL;
+  TagsData *data = (TagsData*) user_data;
+  GtkTreeIter child;
+
+  num = gst_tag_list_get_tag_size (list, tag);
+  for (i = 0; i < num; ++i) {
+    const GValue *val;
+
+    val = gst_tag_list_get_value_index (list, tag, i);
+    if (G_VALUE_HOLDS_STRING (val)) {
+      buffer = g_strdup_printf ("%s : %s", tag, g_value_get_string (val));
+    }
+    else if (G_VALUE_HOLDS_UINT (val)) {
+      buffer = g_strdup_printf ("%s : %u", tag, g_value_get_uint (val));
+    }
+    else if (G_VALUE_HOLDS_DOUBLE (val)) {
+      buffer = g_strdup_printf ("%s : %g", tag, g_value_get_double (val));
+    }
+    else if (G_VALUE_HOLDS_BOOLEAN (val)) {
+      buffer = g_strdup_printf ("%s : %s", tag,
+                g_value_get_boolean (val) ? "true" : "false");
+    }
+    else if (GST_VALUE_HOLDS_DATE_TIME (val)) {
+      GstDateTime *dt = g_value_get_boxed (val);
+      gchar *dt_str = gst_date_time_to_iso8601_string (dt);
+
+      buffer = g_strdup_printf ("%s : %s", tag, dt_str);
+      g_free (dt_str);
+    }
+    else {
+      buffer = g_strdup_printf ("%s : tag of type '%s'",
+          tag, G_VALUE_TYPE_NAME (val));
+    }
+  }
+
+  gtk_tree_store_append (data->tree, &child, &data->parent);
+  gtk_tree_store_set (data->tree, &child, COL_TEXT, buffer, -1);
+  g_free (buffer);
+}
+
+static void
+media_info_insert_taglist (GstPlayerStreamInfo *info, GtkTreeStore *tree,
+  GtkTreeIter parent)
+{
+  GstTagList  *tags;
+  TagsData  data;
+  GtkTreeIter child;
+
+  gtk_tree_store_append (tree, &child, &parent);
+  gtk_tree_store_set (tree, &child, COL_TEXT, "Taglist", -1);
+
+  data.tree = tree;
+  data.parent = child;
+  tags = gst_player_stream_info_get_stream_tags (info);
+  gst_tag_list_foreach (tags, get_one_tag, &data);
+}
+
 static gchar*
 media_info_get_string (GstPlayerStreamInfo *info, gint type)
 {
@@ -156,7 +220,6 @@ media_info_get_string (GstPlayerStreamInfo *info, gint type)
       }
       break;
     }
-    break;
     case AUDIO_INFO_SAMPLE_RATE:
     {
       GstPlayerAudioInfo  *i = (GstPlayerAudioInfo*) info;
@@ -249,6 +312,8 @@ add_stream_info (GtkTreeStore *tree, GtkTreeIter parent,
     gtk_tree_store_set (tree, &child, COL_TEXT, buffer, -1);
     g_free (buffer);
   }
+
+  media_info_insert_taglist (stream, tree, parent);
 }
 
 static GtkTreeModel *
