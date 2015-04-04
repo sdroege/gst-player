@@ -185,6 +185,8 @@ print_all_stream_info (GstPlay *play)
 
   list = gst_player_media_info_get_stream_list (info);
   g_print ("URI : %s\n", gst_player_media_info_get_uri (info));
+  g_print ("Duration : %" GST_TIME_FORMAT "\n",
+      GST_TIME_ARGS(gst_player_media_info_get_duration (info)));
 
   for (l = list; l != NULL; l = l->next) {
     GstTagList  *tags = NULL;

@@ -142,6 +142,7 @@ static gboolean gst_player_stop_internal (gpointer user_data);
 static gboolean gst_player_pause_internal (gpointer user_data);
 static gboolean gst_player_play_internal (gpointer user_data);
 static void change_state (GstPlayer * self, GstPlayerState state);
+static void emit_media_updated_signal (GstPlayer *self, guint signal);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -1044,6 +1045,13 @@ duration_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
           &duration)) {
     emit_duration_changed (self, duration);
   }
+
+  /* update the media information duration */
+  if (self->priv->media_info) {
+    g_object_get (G_OBJECT (self), "duration", &duration, NULL);
+    self->priv->media_info->duration = duration;
+    emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
+  }
 }
 
 static void
@@ -1415,6 +1423,7 @@ static GstPlayerStreamInfo *
 update_stream_info (GstPlayer *self, gint stream_id, GType type,
   GstTagList *tags)
 {
+  gint64 duration;
   GstTagList  *result = NULL;
   GstPlayerStreamInfo  *stream_info;
 
@@ -1462,6 +1471,10 @@ update_stream_info (GstPlayer *self, gint stream_id, GType type,
     if (tags)
       gst_tag_list_unref (tags);
   }
+
+  /* update the media information duration */
+  g_object_get (G_OBJECT (self), "duration", &duration, NULL);
+  self->priv->media_info->duration = duration;
 
   emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
 

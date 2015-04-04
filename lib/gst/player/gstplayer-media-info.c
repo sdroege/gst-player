@@ -513,7 +513,7 @@ G_DEFINE_TYPE (GstPlayerMediaInfo, gst_player_media_info, G_TYPE_OBJECT);
 static void
 gst_player_media_info_init (GstPlayerMediaInfo * info)
 {
-  /* nothing to do here */
+  info->duration = -1;
 }
 
 static void
@@ -613,5 +613,19 @@ gst_player_media_info_get_stream_list (const GstPlayerMediaInfo *info)
     list = g_list_append (list, l->data);
 
   return list;
+}
+
+/**
+ * gst_player_media_info_get_duration:
+ * @info: a #GstPlayerMediaInfo
+ *
+ * Returns: (GstClockTime) Duration of the media.
+ */
+GstClockTime
+gst_player_media_info_get_duration (const GstPlayerMediaInfo *info)
+{
+  g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), -1);
+
+  return info->duration;
 }
 
