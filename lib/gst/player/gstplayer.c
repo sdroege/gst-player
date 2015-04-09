@@ -1489,7 +1489,6 @@ static GstPlayerStreamInfo *
 update_stream_info (GstPlayer *self, gint stream_id, GType type,
   GstTagList *tags)
 {
-  gint64 duration;
   GstTagList  *result = NULL;
   GstPlayerStreamInfo  *stream_info;
 
@@ -1537,10 +1536,6 @@ update_stream_info (GstPlayer *self, gint stream_id, GType type,
     if (tags)
       gst_tag_list_unref (tags);
   }
-
-  /* update the media information duration */
-  g_object_get (G_OBJECT (self), "duration", &duration, NULL);
-  self->priv->media_info->duration = duration;
 
   emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
 
