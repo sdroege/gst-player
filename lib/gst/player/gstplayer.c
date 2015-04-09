@@ -91,6 +91,13 @@ enum
   SIGNAL_LAST
 };
 
+enum
+{
+  GST_PLAY_FLAG_VIDEO = (1UL << 0),
+  GST_PLAY_FLAG_AUDIO = (1UL << 1),
+  GST_PLAY_FLAG_SUBTITLE = (1UL << 2),
+};
+
 struct _GstPlayerPrivate
 {
   gboolean dispatch_to_main_context;
@@ -1048,7 +1055,6 @@ duration_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 
   /* update the media information duration */
   if (self->priv->media_info) {
-    g_object_get (G_OBJECT (self), "duration", &duration, NULL);
     self->priv->media_info->duration = duration;
     emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
   }
@@ -1268,6 +1274,66 @@ _gst_player_set_stream (GstPlayer *self, const gchar *type,
   *output = get_stream_info (self, G_OBJECT_TYPE(input), current);
 
   return TRUE;
+}
+
+static gboolean
+gst_player_set_flag (GstPlayer *self, gint pos)
+{
+  gint flag;
+
+  g_object_get (self->priv->playbin, "flags", &flag, NULL);
+  flag |= pos;
+  g_object_set (self->priv->playbin, "flags", flag, NULL);
+
+  return TRUE;
+}
+
+static gboolean
+gst_player_clear_flag (GstPlayer *self, gint pos)
+{
+  gint flag;
+
+  g_object_get (self->priv->playbin, "flags", &flag, NULL);
+  flag &= ~pos;
+  g_object_set (self->priv->playbin, "flags", flag, NULL);
+
+  return TRUE;
+}
+
+gboolean
+gst_player_audio_track_enable (GstPlayer *self)
+{
+  return gst_player_set_flag (self, GST_PLAY_FLAG_AUDIO);
+}
+
+gboolean
+gst_player_video_track_enable (GstPlayer *self)
+{
+  return gst_player_set_flag (self, GST_PLAY_FLAG_VIDEO);
+}
+
+gboolean
+gst_player_subtitle_track_enable (GstPlayer *self)
+{
+  return gst_player_set_flag (self, GST_PLAY_FLAG_SUBTITLE);
+}
+
+gboolean
+gst_player_audio_track_disable (GstPlayer *self)
+{
+  return gst_player_clear_flag (self, GST_PLAY_FLAG_AUDIO);
+}
+
+gboolean
+gst_player_video_track_disable (GstPlayer *self)
+{
+  return gst_player_clear_flag (self, GST_PLAY_FLAG_VIDEO);
+}
+
+gboolean
+gst_player_subtitle_track_disable (GstPlayer *self)
+{
+  return gst_player_clear_flag (self, GST_PLAY_FLAG_SUBTITLE);
 }
 
 gboolean

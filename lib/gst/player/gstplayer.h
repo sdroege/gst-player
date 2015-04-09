@@ -114,6 +114,19 @@ gboolean     gst_player_set_stream                    (GstPlayer    * player,
                                                        const GstPlayerStreamInfo
                                                        *info);
 
+gboolean     gst_player_audio_track_disable           (GstPlayer *player);
+
+gboolean     gst_player_video_track_disable           (GstPlayer *player);
+
+gboolean     gst_player_subtitle_track_disable        (GstPlayer *player);
+
+gboolean     gst_player_audio_track_enable            (GstPlayer *player);
+
+gboolean     gst_player_video_track_enable            (GstPlayer *player);
+
+gboolean     gst_player_subtitle_track_enable         (GstPlayer *player);
+
+
 G_END_DECLS
 
 #endif /* __GST_PLAYER_H__ */

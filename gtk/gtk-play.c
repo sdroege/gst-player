@@ -513,6 +513,23 @@ current_subtitle_information_cb (GtkWidget *unused, GtkPlay *play)
 }
 
 static void
+track_disable_cb (GtkWidget *widget, GtkPlay *play)
+{
+  guint menu_type;
+
+  menu_type = GPOINTER_TO_INT(g_object_get_data (G_OBJECT(widget), "menu-type"));
+
+  if (menu_type == GTK_AUDIO_POPUP_SUBMENU)
+    gst_player_audio_track_disable (play->player);
+
+  if (menu_type == GTK_VIDEO_POPUP_SUBMENU)
+    gst_player_video_track_disable (play->player);
+
+  if (menu_type == GTK_SUBTITLE_POPUP_SUBMENU)
+    gst_player_subtitle_track_disable (play->player);
+}
+
+static void
 track_selection_cb (GtkWidget *widget, GtkPlay *play)
 {
   guint id;
@@ -541,6 +558,15 @@ track_selection_cb (GtkWidget *widget, GtkPlay *play)
 
     if (stream_id == id) {
       gst_player_set_stream (play->player, stream);
+
+      /* if track is disabled then enable it */
+      if (menu_type == GTK_AUDIO_POPUP_SUBMENU)
+        gst_player_audio_track_enable (play->player);
+      else if (menu_type == GTK_VIDEO_POPUP_SUBMENU)
+        gst_player_video_track_enable (play->player);
+      else
+        gst_player_subtitle_track_enable (play->player);
+
       break;
     }
   }
@@ -554,7 +580,7 @@ tracks_popup_menu_create (GtkPlay *play, gint type)
   gchar *buffer;
   GList *list, *l;
   GtkWidget *menu;
-  GtkWidget *track;
+  GtkWidget *track, *disable, *sep;
   GstPlayerStreamInfo *stream;
   GstPlayerMediaInfo  *info = play->media_info;
 
@@ -599,6 +625,15 @@ tracks_popup_menu_create (GtkPlay *play, gint type)
       g_free (buffer);
     }
   }
+
+  sep = gtk_separator_menu_item_new ();
+  disable = gtk_menu_item_new_with_label ("Disable");
+  g_object_set_data (G_OBJECT(disable), "menu-type",
+      GINT_TO_POINTER(type));
+  g_signal_connect (G_OBJECT(disable), "activate",
+    G_CALLBACK (track_disable_cb), play);
+  gtk_menu_shell_append (GTK_MENU_SHELL(menu), sep);
+  gtk_menu_shell_append (GTK_MENU_SHELL(menu), disable);
 
   gst_player_media_info_stream_info_list_free (list);
 
