@@ -1204,6 +1204,7 @@ stream_info_new (GstPlayer *self, GType type, gint stream_id)
 
     video_info = g_object_new (GST_TYPE_PLAYER_VIDEO_INFO, NULL);
 		stream_info = (GstPlayerStreamInfo*) video_info;
+    g_object_ref (G_OBJECT(stream_info));
   }
 
   if (type == GST_TYPE_PLAYER_AUDIO_INFO) {
@@ -1220,8 +1221,11 @@ stream_info_new (GstPlayer *self, GType type, gint stream_id)
 		stream_info = (GstPlayerStreamInfo*) subtitle_info;
   }
 
+  stream_info->tags = NULL;
+  stream_info->caps = NULL;
   stream_info->stream_id = stream_id;
-  media_info->stream_list = g_list_append (media_info->stream_list, stream_info);
+  media_info->stream_list = g_list_append (media_info->stream_list,
+                                            stream_info);
 
   GST_DEBUG_OBJECT (self, "create new stream stream_id: %d, type: %s",
                     gst_player_stream_info_get_stream_id (stream_info), 
@@ -1257,7 +1261,7 @@ get_stream_info (GstPlayer *self, GType type, gint stream_id)
 
 static gboolean
 _gst_player_set_stream (GstPlayer *self, const gchar *type,
-  const GstPlayerStreamInfo *input, GstPlayerStreamInfo **output)
+  const GstPlayerStreamInfo *input)
 {
   gchar prop[15];
   gint current, stream_id;
@@ -1270,8 +1274,6 @@ _gst_player_set_stream (GstPlayer *self, const gchar *type,
 
   if (stream_id != current)
     return FALSE;
-
-  *output = get_stream_info (self, G_OBJECT_TYPE(input), current);
 
   return TRUE;
 }
@@ -1342,16 +1344,13 @@ gst_player_set_stream (GstPlayer *self, const GstPlayerStreamInfo *sinfo)
   gboolean ret = FALSE;
 
   if (GST_IS_PLAYER_VIDEO_INFO (sinfo))
-    ret = _gst_player_set_stream (self, "video", sinfo,
-                &(self->priv->media_info->current_video));
+    ret = _gst_player_set_stream (self, "video", sinfo);
 
   if (GST_IS_PLAYER_AUDIO_INFO (sinfo))
-    ret = _gst_player_set_stream (self, "audio", sinfo,
-                &(self->priv->media_info->current_audio));
+    ret = _gst_player_set_stream (self, "audio", sinfo);
 
   if (GST_IS_PLAYER_SUBTITLE_INFO (sinfo))
-    ret = _gst_player_set_stream (self, "text", sinfo,
-                &(self->priv->media_info->current_subtitle));
+    ret = _gst_player_set_stream (self, "text", sinfo);
 
   if (ret)
     emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
@@ -1396,12 +1395,14 @@ update_subtitle_info (GstPlayer *self, GstPlayerStreamInfo *stream_info)
   if (stream_info->tags) {
     gchar *lang_code = NULL;
 
-    if (gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE, &lang_code)) {
+    if (gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE,
+        &lang_code)) {
       info->language = g_strdup (gst_tag_get_language_name (lang_code));
       g_free (lang_code);
     }
     else {
-      gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE, &info->language);
+      gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE,
+        &info->language);
     }
   }
 }
@@ -1436,10 +1437,12 @@ update_video_info (GstPlayer *self, GstPlayerStreamInfo *stream_info)
     guint bitrate, max_bitrate;
 
     if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_BITRATE, &bitrate) ||
-        gst_tag_list_get_uint (stream_info->tags, GST_TAG_NOMINAL_BITRATE, &bitrate))
+        gst_tag_list_get_uint (stream_info->tags, GST_TAG_NOMINAL_BITRATE,
+                                &bitrate))
       info->bitrate = bitrate;
 
-    if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_MAXIMUM_BITRATE, &max_bitrate))
+    if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_MAXIMUM_BITRATE,
+                                &max_bitrate))
       info->max_bitrate = max_bitrate;
   }
 }
@@ -1469,18 +1472,22 @@ update_audio_info (GstPlayer *self, GstPlayerStreamInfo *stream_info)
     gchar *lang_code = NULL;
 
     if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_BITRATE, &bitrate) ||
-        gst_tag_list_get_uint (stream_info->tags, GST_TAG_NOMINAL_BITRATE, &bitrate))
+        gst_tag_list_get_uint (stream_info->tags, GST_TAG_NOMINAL_BITRATE,
+                                &bitrate))
       info->bitrate = bitrate;
 
-    if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_MAXIMUM_BITRATE, &max_bitrate))
+    if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_MAXIMUM_BITRATE,
+                                &max_bitrate))
       info->max_bitrate = max_bitrate;
 
-    if (gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE, &lang_code)) {
+    if (gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE,
+          &lang_code)) {
       info->language = g_strdup (gst_tag_get_language_name (lang_code));
       g_free (lang_code);
     }
     else {
-      gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE, &info->language);
+      gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE,
+          &info->language);
     }
   }
 }
@@ -1571,8 +1578,6 @@ video_tags_changed_cb (GstElement *playbin, gint stream_id,
   gint current;
   GstTagList  *tags;
   GstPlayer *self = GST_PLAYER (user_data);
-  GstPlayerMediaInfo  *media_info = self->priv->media_info;
-  GstPlayerStreamInfo *stream_info;
 
   if (!self->priv->media_info)
     return;
@@ -1583,12 +1588,7 @@ video_tags_changed_cb (GstElement *playbin, gint stream_id,
   g_signal_emit_by_name (self->priv->playbin, "get-video-tags",
                          stream_id, &tags);
 
-  stream_info = update_stream_info (self, stream_id,
-                                    GST_TYPE_PLAYER_VIDEO_INFO, tags);
-
-  if (stream_id == current) {
-    media_info->current_video = stream_info;
-  }
+  update_stream_info (self, stream_id, GST_TYPE_PLAYER_VIDEO_INFO, tags);
 }
 
 static void
@@ -1620,8 +1620,6 @@ audio_tags_changed_cb (GstElement *playbin, gint stream_id,
   gint current;
   GstTagList  *tags;
   GstPlayer *self = GST_PLAYER (user_data);
-  GstPlayerMediaInfo  *media_info = self->priv->media_info;
-  GstPlayerStreamInfo *stream_info;
 
   if (!self->priv->media_info)
     return;
@@ -1632,12 +1630,8 @@ audio_tags_changed_cb (GstElement *playbin, gint stream_id,
   g_signal_emit_by_name (self->priv->playbin, "get-audio-tags",
                          stream_id, &tags);
 
-  stream_info = update_stream_info (self, stream_id,
-                                    GST_TYPE_PLAYER_AUDIO_INFO, tags);
+  update_stream_info (self, stream_id, GST_TYPE_PLAYER_AUDIO_INFO, tags);
 
-  if (stream_id == current) {
-    media_info->current_audio = stream_info;
-  }
 }
 
 static void
@@ -1669,8 +1663,6 @@ subtitle_tags_changed_cb (GstElement *playbin, gint stream_id,
   gint current;
   GstTagList  *tags;
   GstPlayer *self = GST_PLAYER (user_data);
-  GstPlayerMediaInfo  *media_info = self->priv->media_info;
-  GstPlayerStreamInfo *stream_info;
 
   if (!self->priv->media_info)
     return;
@@ -1681,12 +1673,7 @@ subtitle_tags_changed_cb (GstElement *playbin, gint stream_id,
   g_signal_emit_by_name (self->priv->playbin, "get-text-tags",
                          stream_id, &tags);
 
-  stream_info = update_stream_info (self, stream_id,
-                                    GST_TYPE_PLAYER_SUBTITLE_INFO, tags);
-
-  if (stream_id == current) {
-    media_info->current_subtitle = stream_info;
-  }
+  update_stream_info (self, stream_id, GST_TYPE_PLAYER_SUBTITLE_INFO, tags);
 }
 
 static gpointer

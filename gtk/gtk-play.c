@@ -477,42 +477,6 @@ show_media_information_cb (GtkWidget *unused, GtkPlay *play)
 }
 
 static void
-current_video_information_cb (GtkWidget *unused, GtkPlay *play)
-{
-  GstPlayerStreamInfo *stream;
-
-  stream = (GstPlayerStreamInfo*)
-            gst_player_media_info_get_current_video (play->media_info);
-  media_information_dialog_create (unused, play, stream,
-    "Current video",
-    "Information about the current video stream used.\n");
-}
-
-static void
-current_audio_information_cb (GtkWidget *unused, GtkPlay *play)
-{
-  GstPlayerStreamInfo *stream;
-
-  stream = (GstPlayerStreamInfo*)
-            gst_player_media_info_get_current_audio (play->media_info);
-  media_information_dialog_create (unused, play, stream,
-    "Current audio",
-    "Information about the current audio stream used.\n");
-}
-
-static void
-current_subtitle_information_cb (GtkWidget *unused, GtkPlay *play)
-{
-  GstPlayerStreamInfo *stream;
-
-  stream = (GstPlayerStreamInfo*)
-            gst_player_media_info_get_current_subtitle (play->media_info);
-  media_information_dialog_create (unused, play, stream,
-    "Current subtitle",
-    "Information about the current subtitle stream used.\n");
-}
-
-static void
 track_disable_cb (GtkWidget *widget, GtkPlay *play)
 {
   guint menu_type;
@@ -645,36 +609,25 @@ popup_submenu_create (GtkPlay *play, gint type)
 {
   GtkWidget *menu;
   GtkWidget *tracks;
-  GtkWidget *current;
 
   menu = gtk_menu_new ();
 
   if (type == GTK_AUDIO_POPUP_SUBMENU) {
     tracks = gtk_menu_item_new_with_label ("Audio tracks");
-    current = gtk_menu_item_new_with_label ("Current audio");
-    g_signal_connect (G_OBJECT(current), "activate",
-        G_CALLBACK (current_audio_information_cb), play);
   }
 
   if (type == GTK_VIDEO_POPUP_SUBMENU) {
     tracks = gtk_menu_item_new_with_label ("Video tracks");
-    current = gtk_menu_item_new_with_label ("Current video");
-    g_signal_connect (G_OBJECT(current), "activate",
-        G_CALLBACK (current_video_information_cb), play);
   }
 
   if (type == GTK_SUBTITLE_POPUP_SUBMENU) {
     tracks = gtk_menu_item_new_with_label ("Subtitle tracks");
-    current = gtk_menu_item_new_with_label ("Current subtitle");
-    g_signal_connect (G_OBJECT(current), "activate",
-        G_CALLBACK (current_subtitle_information_cb), play);
   }
 
   gtk_menu_item_set_submenu (GTK_MENU_ITEM(tracks),
     tracks_popup_menu_create (play, type));
 
   gtk_menu_shell_append (GTK_MENU_SHELL(menu), tracks);
-  gtk_menu_shell_append (GTK_MENU_SHELL(menu), current);
 
   return menu;
 }

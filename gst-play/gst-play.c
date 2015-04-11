@@ -214,40 +214,6 @@ print_all_stream_info (GstPlay *play)
 }
 
 static void
-print_current_stream_info (GstPlay *play)
-{
-  GstPlayerVideoInfo  *video_info;
-  GstPlayerAudioInfo  *audio_info;
-  GstPlayerSubtitleInfo  *subtitle_info;
-  GstPlayerStreamInfo *stream_info;
-
-  if (!play->media_info)
-    return;
-
-  g_print ("Current stream info \n");
-  if ((video_info = gst_player_media_info_get_current_video (play->media_info))) {
-    stream_info = (GstPlayerStreamInfo*) video_info;
-    g_print (" %s_%d #\n", gst_player_stream_info_get_stream_type_nick (stream_info),
-    gst_player_stream_info_get_stream_id (stream_info));
-    print_video_info (video_info);
-  }
-
-  if ((audio_info = gst_player_media_info_get_current_audio (play->media_info))) {
-    stream_info = (GstPlayerStreamInfo*) audio_info;
-    g_print (" %s_%d #\n", gst_player_stream_info_get_stream_type_nick (stream_info),
-              gst_player_stream_info_get_stream_id (stream_info));
-    print_audio_info (audio_info);
-  }
-
-  if ((subtitle_info = gst_player_media_info_get_current_subtitle (play->media_info))) {
-    stream_info = (GstPlayerStreamInfo*) subtitle_info;
-    g_print (" %s_%d #\n", gst_player_stream_info_get_stream_type_nick (stream_info),
-    gst_player_stream_info_get_stream_id (stream_info));
-    print_subtitle_info (subtitle_info);
-  }
-}
-
-static void
 print_all_video_stream (GstPlay *play)
 {
   GList *list = NULL, *l;
@@ -567,8 +533,6 @@ keyboard_cb (const gchar * key_input, gpointer user_data)
   switch (g_ascii_tolower (key_input[0])) {
     case 'i':
       print_all_stream_info (play);
-      g_print ("\n");
-      print_current_stream_info (play);
       g_print ("\n");
       print_all_video_stream (play);
       g_print ("\n");

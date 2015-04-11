@@ -185,63 +185,6 @@ gst_player_media_info_get_audio_streams (const GstPlayerMediaInfo *info)
 }
 
 /**
- * gst_player_get_current_video:
- * @info: a #GstPlayerMediaInfo
- *
- * Returns: the current audio stream #GstPlayerVideoInfo or NULL if unknown.
- */
-GstPlayerVideoInfo*
-gst_player_media_info_get_current_video (const GstPlayerMediaInfo *info)
-{
-  GstPlayerVideoInfo  *vinfo = NULL;
-
-  g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), NULL);
-
-  if (info->current_video)
-    vinfo = (GstPlayerVideoInfo*) info->current_video;
-
-  return vinfo;
-}
-
-/**
- * gst_player_get_current_audio:
- * @info: a #GstPlayerMediaInfo
- *
- * Returns: the current audio stream #GstPlayerAudioInfo or NULL if unknown.
- */
-GstPlayerAudioInfo*
-gst_player_media_info_get_current_audio (const GstPlayerMediaInfo *info)
-{
-  GstPlayerAudioInfo  *ainfo = NULL;
-
-  g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), NULL);
-
-  if (info->current_audio)
-    ainfo = (GstPlayerAudioInfo*) info->current_audio;
-
-  return ainfo;
-}
-
-/**
- * gst_player_get_current_subtitle:
- * @info: a #GstPlayerMediaInfo
- *
- * Returns: the current subtitle stream #GstPlayerSubtitleInfo or NULL if unknown.
- */
-GstPlayerSubtitleInfo*
-gst_player_media_info_get_current_subtitle (const GstPlayerMediaInfo *info)
-{
-  GstPlayerSubtitleInfo  *tinfo = NULL;
-
-  g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), NULL);
-
-  if (info->current_subtitle)
-    tinfo = (GstPlayerSubtitleInfo*) info->current_subtitle;
-
-  return tinfo;
-}
-
-/**
  * gst_player_audio_info_get_language:
  * @info: a #GstPlayerAudioInfo
  *
@@ -524,18 +467,6 @@ gst_player_media_info_finalize (GObject * object)
   if (info->uri) {
     g_free (info->uri);
     info->uri = NULL;
-  }
-
-  if (info->current_video) {
-    info->current_video = NULL;
-  }
-
-  if (info->current_audio) {
-    info->current_audio = NULL;
-  }
-
-  if (info->current_subtitle) {
-    info->current_subtitle = NULL;
   }
 
   if (info->stream_list) {

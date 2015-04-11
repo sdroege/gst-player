@@ -76,11 +76,6 @@ struct _GstPlayerMediaInfo
 
   gchar *uri;
 
-  /* current streams */
-  GstPlayerStreamInfo  *current_audio;
-  GstPlayerStreamInfo  *current_video;
-  GstPlayerStreamInfo  *current_subtitle;
-
   /* all the streams */
   GList *stream_list;
 

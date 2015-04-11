@@ -111,11 +111,8 @@ GstClockTime  gst_player_media_info_get_duration (const GstPlayerMediaInfo *info
 GList*  gst_player_media_info_get_stream_list (const GstPlayerMediaInfo *info);
 void  gst_player_media_info_stream_info_list_free (GList *infos);
 GList*  gst_player_media_info_get_video_streams (const GstPlayerMediaInfo *info);
-GstPlayerVideoInfo* gst_player_media_info_get_current_video (const GstPlayerMediaInfo *info);
 GList*  gst_player_media_info_get_audio_streams (const GstPlayerMediaInfo *info);
 GList*  gst_player_media_info_get_subtitle_streams (const GstPlayerMediaInfo *info);
-GstPlayerAudioInfo* gst_player_media_info_get_current_audio (const GstPlayerMediaInfo *info);
-GstPlayerSubtitleInfo*  gst_player_media_info_get_current_subtitle (const GstPlayerMediaInfo *info);
 
 G_END_DECLS
 
