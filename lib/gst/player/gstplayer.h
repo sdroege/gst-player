@@ -110,8 +110,8 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
 
-gboolean     gst_player_set_stream                    (GstPlayer    * player,
-                                                       const GstPlayerStreamInfo
+gboolean     gst_player_set_track                     (GstPlayer    * player,
+                                                      const GstPlayerStreamInfo
                                                        *info);
 
 gboolean     gst_player_audio_track_disable           (GstPlayer *player);
@@ -126,6 +126,11 @@ gboolean     gst_player_video_track_enable            (GstPlayer *player);
 
 gboolean     gst_player_subtitle_track_enable         (GstPlayer *player);
 
+GstPlayerAudioInfo * gst_player_get_audio_track       (GstPlayer *player);
+
+GstPlayerVideoInfo * gst_player_get_video_track       (GstPlayer *player);
+
+GstPlayerSubtitleInfo * gst_player_get_subtitle_track (GstPlayer *player);
 
 G_END_DECLS
 

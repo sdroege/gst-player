@@ -521,7 +521,7 @@ track_selection_cb (GtkWidget *widget, GtkPlay *play)
     stream_id = gst_player_stream_info_get_stream_id (stream);
 
     if (stream_id == id) {
-      gst_player_set_stream (play->player, stream);
+      gst_player_set_track (play->player, stream);
 
       /* if track is disabled then enable it */
       if (menu_type == GTK_AUDIO_POPUP_SUBMENU)

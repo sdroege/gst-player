@@ -151,6 +151,9 @@ print_one_tag (const GstTagList *list, const gchar *tag, gpointer user_data)
 static void
 print_video_info (GstPlayerVideoInfo *info)
 {
+  if (!info)
+    return;
+
   g_print ("  width : %u\n", gst_player_video_info_get_width(info));
   g_print ("  height : %d\n", gst_player_video_info_get_height (info));
   g_print ("  max_bitrate : %u\n", gst_player_video_info_get_max_bitrate (info));
@@ -160,6 +163,9 @@ print_video_info (GstPlayerVideoInfo *info)
 static void
 print_audio_info (GstPlayerAudioInfo *info)
 {
+  if (!info)
+    return;
+
   g_print ("  sample rate : %u\n", gst_player_audio_info_get_sample_rate (info));
   g_print ("  channels : %u\n", gst_player_audio_info_get_channels (info));
   g_print ("  max_bitrate : %u\n", gst_player_audio_info_get_max_bitrate (info));
@@ -170,7 +176,30 @@ print_audio_info (GstPlayerAudioInfo *info)
 static void
 print_subtitle_info (GstPlayerSubtitleInfo *info)
 {
+  if (!info)
+    return;
+
   g_print ("  language : %s\n", gst_player_subtitle_info_get_language (info));
+}
+
+static void
+print_current_tracks (GstPlay *play)
+{
+  GstPlayerAudioInfo  *audio;
+  GstPlayerVideoInfo  *video;
+  GstPlayerSubtitleInfo *subtitle;
+
+  audio = gst_player_get_audio_track (play->player);
+  g_print ("Audio track: \n");
+  print_audio_info (audio);
+
+  video = gst_player_get_video_track (play->player);
+  g_print ("Video track: \n");
+  print_video_info (video);
+
+  subtitle = gst_player_get_subtitle_track (play->player);
+  g_print ("Subtitle track: \n");
+  print_subtitle_info (subtitle);
 }
 
 static void
@@ -533,6 +562,8 @@ keyboard_cb (const gchar * key_input, gpointer user_data)
   switch (g_ascii_tolower (key_input[0])) {
     case 'i':
       print_all_stream_info (play);
+      g_print ("\n");
+      print_current_tracks (play);
       g_print ("\n");
       print_all_video_stream (play);
       g_print ("\n");

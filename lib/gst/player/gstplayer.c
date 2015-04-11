@@ -1256,11 +1256,11 @@ get_stream_info (GstPlayer *self, GType type, gint stream_id)
   if (list)
     gst_player_media_info_stream_info_list_free (list);
 
-  return stream_info_new (self, type, stream_id);
+  return NULL;
 }
 
 static gboolean
-_gst_player_set_stream (GstPlayer *self, const gchar *type,
+_gst_player_set_track (GstPlayer *self, const gchar *type,
   const GstPlayerStreamInfo *input)
 {
   gchar prop[15];
@@ -1339,23 +1339,66 @@ gst_player_subtitle_track_disable (GstPlayer *self)
 }
 
 gboolean
-gst_player_set_stream (GstPlayer *self, const GstPlayerStreamInfo *sinfo)
+gst_player_set_track (GstPlayer *self, const GstPlayerStreamInfo *sinfo)
 {
   gboolean ret = FALSE;
 
   if (GST_IS_PLAYER_VIDEO_INFO (sinfo))
-    ret = _gst_player_set_stream (self, "video", sinfo);
+    ret = _gst_player_set_track (self, "video", sinfo);
 
   if (GST_IS_PLAYER_AUDIO_INFO (sinfo))
-    ret = _gst_player_set_stream (self, "audio", sinfo);
+    ret = _gst_player_set_track (self, "audio", sinfo);
 
   if (GST_IS_PLAYER_SUBTITLE_INFO (sinfo))
-    ret = _gst_player_set_stream (self, "text", sinfo);
+    ret = _gst_player_set_track (self, "text", sinfo);
 
   if (ret)
     emit_media_updated_signal (self, SIGNAL_MEDIA_INFO_UPDATED);
 
   return ret;
+}
+
+static GstPlayerStreamInfo *
+gst_player_get_current_stream (GstPlayer *self, GType type)
+{
+  gint stream_id;
+  gchar *prop = NULL;
+
+  if (type == GST_TYPE_PLAYER_VIDEO_INFO)
+    prop = g_strdup ("current-video");
+
+  if (type == GST_TYPE_PLAYER_AUDIO_INFO)
+    prop = g_strdup ("current-audio");
+
+  if (type == GST_TYPE_PLAYER_SUBTITLE_INFO)
+    prop = g_strdup ("current-text");
+
+  g_object_get (G_OBJECT(self->priv->playbin), prop, &stream_id, NULL);
+
+  g_free (prop);
+
+  return get_stream_info (self, type, stream_id);
+}
+
+GstPlayerAudioInfo *
+gst_player_get_audio_track (GstPlayer *self)
+{
+  return (GstPlayerAudioInfo*) gst_player_get_current_stream
+                                (self, GST_TYPE_PLAYER_AUDIO_INFO);
+}
+
+GstPlayerVideoInfo *
+gst_player_get_video_track (GstPlayer *self)
+{
+  return (GstPlayerVideoInfo*) gst_player_get_current_stream
+                                (self, GST_TYPE_PLAYER_VIDEO_INFO);
+}
+
+GstPlayerSubtitleInfo *
+gst_player_get_subtitle_track (GstPlayer *self)
+{
+  return (GstPlayerSubtitleInfo*) gst_player_get_current_stream
+                                (self, GST_TYPE_PLAYER_SUBTITLE_INFO);
 }
 
 static GstCaps*
@@ -1500,9 +1543,14 @@ update_stream_info (GstPlayer *self, gint stream_id, GType type,
   GstPlayerStreamInfo  *stream_info;
 
   stream_info = get_stream_info (self, type, stream_id);
+
   if (stream_info == NULL) {
-    GST_ERROR_OBJECT (self, "failed to get stream object (%d)", stream_id);
-    return NULL;
+    /* create a new stream object */
+    stream_info = stream_info_new (self, type, stream_id);
+
+    if (stream_info == NULL) {
+      return NULL;
+    }
   }
 
   result = gst_tag_list_merge (stream_info->tags, tags,
