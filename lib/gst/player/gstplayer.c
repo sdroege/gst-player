@@ -1361,17 +1361,30 @@ gst_player_set_track (GstPlayer *self, const GstPlayerStreamInfo *sinfo)
 static GstPlayerStreamInfo *
 gst_player_get_current_stream (GstPlayer *self, GType type)
 {
+  guint flag;
   gint stream_id;
   gchar *prop = NULL;
 
-  if (type == GST_TYPE_PLAYER_VIDEO_INFO)
+  g_object_get (G_OBJECT(self->priv->playbin), "flags", &flag, NULL);
+
+  if (type == GST_TYPE_PLAYER_VIDEO_INFO) {
+    /* if flag is clear then no need to get the current stream id */
+    if (!(flag & GST_PLAY_FLAG_VIDEO))
+      return NULL;
     prop = g_strdup ("current-video");
+  }
 
-  if (type == GST_TYPE_PLAYER_AUDIO_INFO)
+  if (type == GST_TYPE_PLAYER_AUDIO_INFO) {
+    if (!(flag & GST_PLAY_FLAG_AUDIO))
+      return NULL;
     prop = g_strdup ("current-audio");
+  }
 
-  if (type == GST_TYPE_PLAYER_SUBTITLE_INFO)
+  if (type == GST_TYPE_PLAYER_SUBTITLE_INFO) {
+    if (!(flag & GST_PLAY_FLAG_SUBTITLE))
+      return NULL;
     prop = g_strdup ("current-text");
+  }
 
   g_object_get (G_OBJECT(self->priv->playbin), prop, &stream_id, NULL);
 
