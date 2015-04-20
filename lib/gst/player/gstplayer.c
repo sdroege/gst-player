@@ -696,7 +696,9 @@ static gboolean gst_player_set_playback_rate_internal (gpointer user_data)
   GstClockTime pos;
 
   GST_DEBUG_OBJECT (self, "Play");
-
+  if (self->priv->current_state < GST_STATE_PAUSED) {
+    return;
+  }
   g_mutex_lock (&self->priv->lock);
   if (!self->priv->uri) {
     g_mutex_unlock (&self->priv->lock);
@@ -712,6 +714,8 @@ static gboolean gst_player_set_playback_rate_internal (gpointer user_data)
                     pos,
                     GST_SEEK_TYPE_NONE,
                     0);
+  
+  gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
 
   return G_SOURCE_REMOVE;  
 }
