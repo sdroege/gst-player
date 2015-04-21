@@ -22,6 +22,7 @@
 #define __GST_PLAYER_H__
 
 #include <gst/gst.h>
+#include <gst/player/gstplayer-media-info.h>
 
 G_BEGIN_DECLS
 
@@ -108,6 +109,32 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
+
+void          gst_player_set_video_track_enabled      (GstPlayer    * player,
+                                                       gboolean enabled);
+
+void          gst_player_set_audio_track_enabled      (GstPlayer    * player,
+                                                       gboolean enabled);
+
+void          gst_player_set_subtitle_track_enabled   (GstPlayer    * player,
+                                                       gboolean enabled);
+
+gboolean      gst_player_set_audio_track              (GstPlayer    *player,
+                                                       gint stream_index);
+
+gboolean      gst_player_set_video_track              (GstPlayer    *player,
+                                                       gint stream_index);
+
+gboolean      gst_player_set_subtitle_track           (GstPlayer    *player,
+                                                       gint stream_index);
+
+GstPlayerMediaInfo * gst_player_get_media_info        (GstPlayer    * player);
+
+GstPlayerAudioInfo * gst_player_get_audio_track       (GstPlayer    * player);
+
+GstPlayerVideoInfo * gst_player_get_video_track       (GstPlayer    * player);
+
+GstPlayerSubtitleInfo * gst_player_get_subtitle_track (GstPlayer    * player);
 
 G_END_DECLS
 
