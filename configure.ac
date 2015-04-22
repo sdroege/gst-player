@@ -53,7 +53,7 @@ AC_SUBST(LT_AGE)
 PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES(GLIB, [glib-2.0 gobject-2.0])
-PKG_CHECK_MODULES(GSTREAMER, [gstreamer-1.0 >= 1.4 gstreamer-video-1.0 >= 1.4])
+PKG_CHECK_MODULES(GSTREAMER, [gstreamer-1.0 >= 1.4 gstreamer-video-1.0 >= 1.4 gstreamer-tag-1.0 >= 1.4])
 
 GLIB_PREFIX="`$PKG_CONFIG --variable=prefix glib-2.0`"
 AC_SUBST(GLIB_PREFIX)

@@ -1,7 +1,8 @@
 lib_LTLIBRARIES = libgstplayer-@GST_PLAYER_API_VERSION@.la
 
 libgstplayer_@GST_PLAYER_API_VERSION@_la_SOURCES = \
-	gstplayer.c
+	gstplayer.c  \
+	gstplayer-media-info.c
 
 libgstplayer_@GST_PLAYER_API_VERSION@_la_CFLAGS = \
 	-I$(top_srcdir)/lib \
@@ -22,9 +23,12 @@ libgstplayer_@GST_PLAYER_API_VERSION@_la_LIBADD = \
 
 libgstplayerdir = $(includedir)/gst-player-@GST_PLAYER_API_VERSION@/gst/player
 
+noinst_HEADERS = gstplayer-media-info-private.h
+
 libgstplayer_HEADERS = \
 	player.h \
-	gstplayer.h
+	gstplayer.h \
+	gstplayer-media-info.h
 
 CLEANFILES =
 
@@ -52,6 +56,7 @@ GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@G
 		--pkg gobject-2.0 \
 		--pkg gstreamer-1.0 \
 		--pkg gstreamer-video-1.0 \
+		--pkg gstreamer-tag-1.0 \
 		--pkg-export gstreamer-player-@GST_PLAYER_API_VERSION@ \
 		--add-init-section="gst_init(NULL,NULL);" \
 		--output $@ \
