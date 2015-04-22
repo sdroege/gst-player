@@ -1268,8 +1268,6 @@ gst_player_subtitle_info_update (GstPlayer *self,
   GstPlayerSubtitleInfo *info = (GstPlayerSubtitleInfo*) stream_info;
 
   if (stream_info->tags) {
-    gchar *lang_code;
-    gchar *language;
 
     if (info->language) {
       g_free (info->language);
@@ -1280,15 +1278,18 @@ gst_player_subtitle_info_update (GstPlayer *self,
      * available then try language code. If we find the language code
      * then use gstreamer api to translate code to full name.
      */
-    if (gst_tag_list_get_string (stream_info->tags,
-          GST_TAG_LANGUAGE_NAME, &language)) {
-      info->language = g_strdup (language);
-      g_free (language);
-    } else {
-      gst_tag_list_get_string (stream_info->tags,
-          GST_TAG_LANGUAGE_CODE, &lang_code);
-      info->language = g_strdup (gst_tag_get_language_name (lang_code));
-      g_free (lang_code);
+    gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_NAME,
+                              &info->language);
+    if (!info->language) {
+      gchar *lang_code = NULL;
+
+      gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE,
+                                &lang_code);
+      if (lang_code) {
+        info->language = g_strdup (gst_tag_get_language_name (lang_code));
+        g_free (lang_code);
+
+      }
     }
   }
 
@@ -1389,8 +1390,6 @@ gst_player_audio_info_update (GstPlayer *self,
   }
 
   if (stream_info->tags) {
-    gchar *lang_code;
-    gchar *language;
     guint bitrate, max_bitrate;
 
     if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_BITRATE,
@@ -1415,15 +1414,18 @@ gst_player_audio_info_update (GstPlayer *self,
      * available then try language code. If we find the language code
      * then use gstreamer api to translate code to full name.
      */
-    if (gst_tag_list_get_string (stream_info->tags,
-          GST_TAG_LANGUAGE_NAME, &language)) {
-      info->language = g_strdup (language);
-      g_free (language);
-    } else {
-      gst_tag_list_get_string (stream_info->tags,
-          GST_TAG_LANGUAGE_CODE, &lang_code);
-      info->language = g_strdup (gst_tag_get_language_name (lang_code));
-      g_free (lang_code);
+    gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_NAME,
+                              &info->language);
+    if (!info->language) {
+      gchar *lang_code = NULL;
+
+      gst_tag_list_get_string (stream_info->tags, GST_TAG_LANGUAGE_CODE,
+                                &lang_code);
+      if (lang_code) {
+        info->language = g_strdup (gst_tag_get_language_name (lang_code));
+        g_free (lang_code);
+
+      }
     }
   }
 
