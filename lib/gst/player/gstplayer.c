@@ -620,17 +620,30 @@ emit_error (GstPlayer * self, GError * err)
 }
 
 static void
+dump_dot_file (GstPlayer * self, const gchar * name)
+{
+  gchar *full_name;
+
+  full_name = g_strdup_printf ("gst-player.%p.%s", self, name);
+
+  GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS (GST_BIN (self->priv->playbin),
+      GST_DEBUG_GRAPH_SHOW_ALL, full_name);
+
+  g_free (full_name);
+}
+
+static void
 error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GError *err, *player_err;
   gchar *name, *debug, *message, *full_message;
 
+  dump_dot_file (self, "error");
+
   gst_message_parse_error (msg, &err, &debug);
 
   name = gst_object_get_path_string (msg->src);
-  gst_message_parse_error (msg, &err, &debug);
-
   message = gst_error_get_message (err->domain, err->code);
 
   if (debug)
@@ -650,6 +663,41 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       g_error_new_literal (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
       full_message);
   emit_error (self, player_err);
+
+  g_clear_error (&err);
+  g_free (debug);
+  g_free (name);
+  g_free (full_message);
+  g_free (message);
+}
+
+static void
+warning_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+{
+  GstPlayer *self = GST_PLAYER (user_data);
+  GError *err;
+  gchar *name, *debug, *message, *full_message;
+
+  dump_dot_file (self, "warning");
+
+  gst_message_parse_warning (msg, &err, &debug);
+
+  name = gst_object_get_path_string (msg->src);
+  message = gst_error_get_message (err->domain, err->code);
+
+  if (debug)
+    full_message =
+        g_strdup_printf ("Warning from element %s: %s\n%s\n%s", name, message,
+        err->message, debug);
+  else
+    full_message =
+        g_strdup_printf ("Warning from element %s: %s\n%s", name, message,
+        err->message);
+
+  GST_WARNING_OBJECT (self, "WARNING: from element %s: %s\n", name,
+      err->message);
+  if (debug != NULL)
+    GST_WARNING_OBJECT (self, "Additional debug info:\n%s\n", debug);
 
   g_clear_error (&err);
   g_free (debug);
@@ -926,10 +974,18 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   gst_message_parse_state_changed (msg, &old_state, &new_state, &pending_state);
 
   if (GST_MESSAGE_SRC (msg) == GST_OBJECT (self->priv->playbin)) {
+    gchar *transition_name;
+
     GST_DEBUG_OBJECT (self, "Changed state old: %s new: %s pending: %s",
         gst_element_state_get_name (old_state),
         gst_element_state_get_name (new_state),
         gst_element_state_get_name (pending_state));
+
+    transition_name = g_strdup_printf ("%s_%s",
+        gst_element_state_get_name (old_state),
+        gst_element_state_get_name (new_state));
+    dump_dot_file (self, transition_name);
+    g_free (transition_name);
 
     self->priv->current_state = new_state;
 
@@ -1151,6 +1207,8 @@ gst_player_main (gpointer data)
   g_source_attach (bus_source, self->priv->context);
 
   g_signal_connect (G_OBJECT (bus), "message::error", G_CALLBACK (error_cb),
+      self);
+  g_signal_connect (G_OBJECT (bus), "message::warning", G_CALLBACK (warning_cb),
       self);
   g_signal_connect (G_OBJECT (bus), "message::eos", G_CALLBACK (eos_cb), self);
   g_signal_connect (G_OBJECT (bus), "message::state-changed",
