@@ -1345,14 +1345,14 @@ gst_player_video_info_update (GstPlayer *self,
     guint bitrate, max_bitrate;
 
     if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_BITRATE,
-          &bitrate) || gst_tag_list_get_uint (stream_info->tags,
-            GST_TAG_NOMINAL_BITRATE, &bitrate))
+          &bitrate))
       info->bitrate = bitrate;
     else
       info->bitrate = -1;
 
-    if (gst_tag_list_get_uint (stream_info->tags,
-          GST_TAG_MAXIMUM_BITRATE, &max_bitrate))
+    if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_MAXIMUM_BITRATE,
+          &max_bitrate) || gst_tag_list_get_uint (stream_info->tags,
+          GST_TAG_NOMINAL_BITRATE, &max_bitrate))
       info->max_bitrate = max_bitrate;
     else
       info->max_bitrate = -1;
@@ -1393,14 +1393,14 @@ gst_player_audio_info_update (GstPlayer *self,
     guint bitrate, max_bitrate;
 
     if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_BITRATE,
-          &bitrate) || gst_tag_list_get_uint (stream_info->tags,
-            GST_TAG_NOMINAL_BITRATE, &bitrate))
+          &bitrate))
       info->bitrate = bitrate;
     else
       info->bitrate = -1;
 
-    if (gst_tag_list_get_uint (stream_info->tags,
-          GST_TAG_MAXIMUM_BITRATE, &max_bitrate))
+    if (gst_tag_list_get_uint (stream_info->tags, GST_TAG_MAXIMUM_BITRATE,
+          &max_bitrate) || gst_tag_list_get_uint (stream_info->tags,
+          GST_TAG_NOMINAL_BITRATE, &max_bitrate))
       info->max_bitrate = max_bitrate;
     else
       info->max_bitrate = -1;
