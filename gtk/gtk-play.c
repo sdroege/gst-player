@@ -50,6 +50,8 @@ typedef struct
   GtkWidget *prev_button, *next_button;
   GtkWidget *seekbar;
   GtkWidget *video_area;
+  GtkWidget *info_label;
+  GtkWidget *info_bar;
   GtkWidget *volume_button;
   gulong seekbar_value_changed_signal_id;
   gboolean playing;
@@ -120,6 +122,13 @@ play_pause_clicked_cb (GtkButton * button, GtkPlay * play)
 }
 
 static void
+clear_missing_plugins (GtkPlay * play)
+{
+  gtk_label_set_text (GTK_LABEL (play->info_label), "");
+  gtk_widget_hide (play->info_bar);
+}
+
+static void
 skip_prev_clicked_cb (GtkButton * button, GtkPlay * play)
 {
   GList *prev;
@@ -134,6 +143,7 @@ skip_prev_clicked_cb (GtkButton * button, GtkPlay * play)
 
   gtk_widget_set_sensitive (play->next_button, TRUE);
   gst_player_set_uri (play->player, prev->data);
+  clear_missing_plugins (play);
   gst_player_play (play->player);
   set_title (play, prev->data);
   gtk_widget_set_sensitive (play->prev_button, g_list_previous (prev) != NULL);
@@ -154,6 +164,7 @@ skip_next_clicked_cb (GtkButton * button, GtkPlay * play)
 
   gtk_widget_set_sensitive (play->prev_button, TRUE);
   gst_player_set_uri (play->player, next->data);
+  clear_missing_plugins (play);
   gst_player_play (play->player);
   set_title (play, next->data);
   gtk_widget_set_sensitive (play->next_button, g_list_next (next) != NULL);
@@ -172,10 +183,16 @@ volume_changed_cb (GtkScaleButton * button, gdouble value, GtkPlay * play)
   gst_player_set_volume (play->player, value);
 }
 
+void
+info_bar_response_cb (GtkInfoBar * bar, gint response, GtkPlay * play)
+{
+  gtk_widget_hide (GTK_WIDGET (bar));
+}
+
 static void
 create_ui (GtkPlay * play)
 {
-  GtkWidget *controls, *main_hbox, *main_vbox;
+  GtkWidget *controls, *main_hbox, *main_vbox, *info_bar, *content_area;
 
   play->window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   g_signal_connect (G_OBJECT (play->window), "delete-event",
@@ -186,6 +203,20 @@ create_ui (GtkPlay * play)
   gtk_widget_set_double_buffered (play->video_area, FALSE);
   g_signal_connect (play->video_area, "realize",
       G_CALLBACK (video_area_realize_cb), play);
+
+  play->info_bar = gtk_info_bar_new ();
+  gtk_info_bar_set_message_type (GTK_INFO_BAR (play->info_bar),
+      GTK_MESSAGE_WARNING);
+  gtk_info_bar_set_show_close_button (GTK_INFO_BAR (play->info_bar),
+      TRUE);
+  gtk_widget_set_no_show_all (play->info_bar, TRUE);
+  g_signal_connect (play->info_bar, "response",
+      G_CALLBACK (info_bar_response_cb), play);
+
+  content_area = gtk_info_bar_get_content_area (GTK_INFO_BAR (play->info_bar));
+  play->info_label = gtk_label_new ("");
+  gtk_container_add (GTK_CONTAINER (content_area), play->info_label);
+  gtk_widget_show (play->info_label);
 
   /* Unified play/pause button */
   play->play_pause_button =
@@ -237,6 +268,7 @@ create_ui (GtkPlay * play)
 
   main_vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_box_pack_start (GTK_BOX (main_vbox), main_hbox, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (main_vbox), play->info_bar, FALSE, FALSE, 0);
   gtk_box_pack_start (GTK_BOX (main_vbox), controls, FALSE, FALSE, 0);
   gtk_container_add (GTK_CONTAINER (play->window), main_vbox);
 
@@ -301,6 +333,7 @@ eos_cb (GstPlayer * unused, GtkPlay * play)
       gtk_widget_set_sensitive (play->next_button, g_list_next (next) != NULL);
 
       gst_player_set_uri (play->player, next->data);
+      clear_missing_plugins (play);
       gst_player_play (play->player);
       set_title (play, next->data);
     } else {
@@ -313,6 +346,24 @@ eos_cb (GstPlayer * unused, GtkPlay * play)
       gtk_button_set_image (GTK_BUTTON (play->play_pause_button), image);
       play->playing = FALSE;
     }
+  }
+}
+
+static void
+error_cb (GstPlayer * player, GError * err, GtkPlay * play)
+{
+  char *message;
+
+  if (g_error_matches (err, gst_player_error_quark (),
+      GST_PLAYER_ERROR_MISSING_PLUGIN)) {
+    // add message to end of any existing message: there may be
+    // multiple missing plugins.
+    message = g_strdup_printf ("%s%s. ",
+        gtk_label_get_text (GTK_LABEL (play->info_label)), err->message);
+    gtk_label_set_text (GTK_LABEL (play->info_label), message);
+    g_free (message);
+
+    gtk_widget_show (play->info_bar);
   }
 }
 
@@ -403,6 +454,7 @@ main (gint argc, gchar ** argv)
   g_signal_connect (play.player, "video-dimensions-changed",
       G_CALLBACK (video_dimensions_changed_cb), &play);
   g_signal_connect (play.player, "end-of-stream", G_CALLBACK (eos_cb), &play);
+  g_signal_connect (play.player, "error", G_CALLBACK (error_cb), &play);
 
   /* We have file(s) that need playing. */
   set_title (&play, g_list_first (play.uris)->data);
