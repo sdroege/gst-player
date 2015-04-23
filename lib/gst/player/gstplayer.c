@@ -138,6 +138,7 @@ static gboolean gst_player_stop_internal (gpointer user_data);
 static gboolean gst_player_pause_internal (gpointer user_data);
 static gboolean gst_player_play_internal (gpointer user_data);
 static void change_state (GstPlayer * self, GstPlayerState state);
+static gboolean gst_player_set_playback_rate_internal (gpointer user_data);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -734,6 +735,44 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
   self->priv->is_eos = TRUE;
+}
+
+static gboolean gst_player_set_playback_rate_internal (gpointer user_data)
+{
+  GstPlayer *self = GST_PLAYER (user_data);
+  GstStateChangeReturn state_ret;
+  GstClockTime pos;
+
+  GST_DEBUG_OBJECT (self, "Play");
+  if (self->priv->current_state < GST_STATE_PAUSED) {
+    return;
+  }
+  g_mutex_lock (&self->priv->lock);
+  if (!self->priv->uri) {
+    g_mutex_unlock (&self->priv->lock);
+    return G_SOURCE_REMOVE;
+  }
+  g_mutex_unlock (&self->priv->lock);
+  pos = gst_player_get_position (self);
+  gst_element_seek (self->priv->playbin,
+                    self->priv->rate,
+                    GST_FORMAT_TIME,
+                    GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
+                    GST_SEEK_TYPE_SET,
+                    pos,
+                    GST_SEEK_TYPE_NONE,
+                    0);
+  
+  gst_element_set_state (self->priv->playbin, GST_STATE_PLAYING);
+
+  return G_SOURCE_REMOVE;  
+}
+
+void gst_player_set_playback_rate (GstPlayer * self, gdouble rate)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+  self->priv->rate = rate;
+  g_main_context_invoke (self->priv->context, gst_player_set_playback_rate_internal, self);
 }
 
 typedef struct
