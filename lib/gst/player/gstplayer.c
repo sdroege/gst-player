@@ -27,9 +27,7 @@
 
 /* TODO:
  *
- * - Media info, tags
- * - Audio track selection
- * - Subtitle track selection, external subs, disable
+ * - external subtitles
  * - Visualization
  * - Playback rate
  * - volume/mute change notification
