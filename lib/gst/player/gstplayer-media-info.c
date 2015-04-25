@@ -350,13 +350,13 @@ gst_player_subtitle_info_class_init (GObjectClass * klass)
 }
 
 /**
- * gst_player_subtitle_get_language:
+ * gst_player_subtitle_info_get_language:
  * @info: a #GstPlayerSubtitleInfo
  *
  * Returns: the language of the stream, or NULL if unknown.
  */
 const gchar *
-gst_player_subtitle_get_language (const GstPlayerSubtitleInfo * info)
+gst_player_subtitle_info_get_language (const GstPlayerSubtitleInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_SUBTITLE_INFO (info), NULL);
 

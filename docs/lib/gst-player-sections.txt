@@ -73,7 +73,7 @@ gst_player_video_info_get_framerate
 gst_player_video_info_get_max_bitrate
 gst_player_video_info_get_pixel_aspect_ratio
 
-gst_player_subtitle_get_language
+gst_player_subtitle_info_get_language
 <SUBSECTION Standard>
 GST_IS_PLAYER
 GST_IS_PLAYER_CLASS

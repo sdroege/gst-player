@@ -140,7 +140,7 @@ typedef struct _GstPlayerSubtitleInfo GstPlayerSubtitleInfo;
 typedef GObjectClass GstPlayerSubtitleInfoClass;
 GType gst_player_subtitle_info_get_type (void);
 
-const gchar*  gst_player_subtitle_get_language
+const gchar*  gst_player_subtitle_info_get_language
                 (const GstPlayerSubtitleInfo* info);
 
 #define GST_TYPE_PLAYER_MEDIA_INFO \
