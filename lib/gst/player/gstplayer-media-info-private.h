@@ -1,4 +1,5 @@
 /* GStreamer
+ *
  * Copyright (C) 2015 Brijesh Singh <brijesh.ksingh@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -18,6 +19,9 @@
  */
 
 #include "gstplayer-media-info.h"
+
+#ifndef __GST_PLAYER_MEDIA_INFO_PRIVATE_H__
+#define __GST_PLAYER_MEDIA_INFO_PRIVATE_H__
 
 struct _GstPlayerStreamInfo
 {
@@ -85,3 +89,5 @@ G_GNUC_INTERNAL GstPlayerStreamInfo*  gst_player_stream_info_new
                                       (gint stream_index, GType type);
 G_GNUC_INTERNAL GstPlayerStreamInfo*  gst_player_stream_info_copy
                                       (GstPlayerStreamInfo *ref);
+
+#endif /* __GST_PLAYER_MEDIA_INFO_PRIVATE_H__ */

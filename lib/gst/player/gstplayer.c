@@ -1,6 +1,7 @@
 /* GStreamer
  *
  * Copyright (C) 2014-2015 Sebastian Dröge <sebastian@centricular.com>
+ * Copyright (C) 2015 Brijesh Singh <brijesh.ksingh@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public

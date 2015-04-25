@@ -178,4 +178,4 @@ GList*        gst_player_get_subtitle_streams
 
 G_END_DECLS
 
-#endif // __GST_PLAYER_MEDIA_INFO_H
+#endif /* __GST_PLAYER_MEDIA_INFO_H */
