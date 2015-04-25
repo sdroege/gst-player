@@ -1,2 +1,7 @@
 #include <gst/player/gstplayer.h>
 gst_player_get_type
+gst_player_media_info_get_type
+gst_player_stream_info_get_type
+gst_player_video_info_get_type
+gst_player_audio_info_get_type
+gst_player_subtitle_info_get_type
