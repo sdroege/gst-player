@@ -780,6 +780,13 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   self->priv->is_eos = TRUE;
 }
 
+void gst_player_set_playback_rate (GstPlayer * self, gdouble rate)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+  self->priv->rate = rate;
+  gst_player_seek (self, 0);
+}
+
 typedef struct
 {
   GstPlayer *player;
@@ -2072,7 +2079,7 @@ gst_player_stop (GstPlayer * self)
 static void
 gst_player_seek_internal_locked (GstPlayer * self)
 {
-  GstClockTime position;
+  GstClockTime position,start_pos;
   gboolean ret;
   GstStateChangeReturn state_ret;
 
@@ -2109,10 +2116,18 @@ gst_player_seek_internal_locked (GstPlayer * self)
 
   remove_tick_source (self);
   self->priv->is_eos = FALSE;
+  
+  start_pos = gst_player_get_position(self);
 
   ret =
-      gst_element_seek_simple (self->priv->playbin, GST_FORMAT_TIME,
-      GST_SEEK_FLAG_FLUSH, position);
+      gst_element_seek (self->priv->playbin,
+                          self->priv->rate,
+                          GST_FORMAT_TIME,
+                          GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE,
+                          GST_SEEK_TYPE_SET,
+                          start_pos,
+                          GST_SEEK_TYPE_NONE,
+                          position);
 
   if (!ret)
     emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
