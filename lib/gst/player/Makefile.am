@@ -51,6 +51,7 @@ GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@G
 		--libtool="${LIBTOOL}" \
 		--pkg gobject-2.0 \
 		--pkg gstreamer-1.0 \
+		--pkg gstreamer-video-1.0 \
 		--pkg-export gstreamer-player-@GST_PLAYER_API_VERSION@ \
 		--add-init-section="gst_init(NULL,NULL);" \
 		--output $@ \
