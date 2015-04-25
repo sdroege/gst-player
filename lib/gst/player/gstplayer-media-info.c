@@ -51,7 +51,7 @@ gst_player_stream_info_class_init (GObjectClass * klass)
 }
 
 /**
- * gst_player_stream_info_get_stream_index:
+ * gst_player_stream_info_get_index:
  * @info: a #GstPlayerStreamInfo
  *
  * Function to get stream index from #GstPlayerStreamInfo instance.
@@ -59,7 +59,7 @@ gst_player_stream_info_class_init (GObjectClass * klass)
  * Returns: the stream index of this stream.
  */
 gint
-gst_player_stream_info_get_stream_index (const GstPlayerStreamInfo * info)
+gst_player_stream_info_get_index (const GstPlayerStreamInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), -1);
 
@@ -67,7 +67,7 @@ gst_player_stream_info_get_stream_index (const GstPlayerStreamInfo * info)
 }
 
 /**
- * gst_player_stream_info_get_stream_type_nick:
+ * gst_player_stream_info_get_stream_type:
  * @info: a #GstPlayerStreamInfo
  *
  * Function to return human readable name for the stream type
@@ -76,7 +76,7 @@ gst_player_stream_info_get_stream_index (const GstPlayerStreamInfo * info)
  * Returns: a human readable name
  */
 const gchar *
-gst_player_stream_info_get_stream_type_nick (const GstPlayerStreamInfo * info)
+gst_player_stream_info_get_stream_type (const GstPlayerStreamInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), NULL);
 
@@ -95,7 +95,7 @@ gst_player_stream_info_get_stream_type_nick (const GstPlayerStreamInfo * info)
  * Returns: (transfer none): the tags contained in this stream.
  */
 GstTagList *
-gst_player_stream_info_get_stream_tags (const GstPlayerStreamInfo * info)
+gst_player_stream_info_get_tags (const GstPlayerStreamInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), NULL);
 
@@ -109,7 +109,7 @@ gst_player_stream_info_get_stream_tags (const GstPlayerStreamInfo * info)
  * Returns: (transfer none): the #GstCaps of the stream.
  */
 GstCaps *
-gst_player_stream_info_get_stream_caps (const GstPlayerStreamInfo * info)
+gst_player_stream_info_get_caps (const GstPlayerStreamInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), NULL);
 

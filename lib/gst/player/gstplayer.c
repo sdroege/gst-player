@@ -1593,7 +1593,7 @@ gst_player_stream_info_update_tags_and_caps (GstPlayer * self,
   GstTagList *tags;
   gint stream_index;
 
-  stream_index = gst_player_stream_info_get_stream_index (s);
+  stream_index = gst_player_stream_info_get_index (s);
 
   if (GST_IS_PLAYER_VIDEO_INFO (s))
     g_signal_emit_by_name (self->priv->playbin, "get-video-tags",
@@ -1614,7 +1614,7 @@ gst_player_stream_info_update_tags_and_caps (GstPlayer * self,
   s->caps = get_caps (self, stream_index, G_OBJECT_TYPE (s));
 
   GST_DEBUG_OBJECT (self, "%s index: %d tags: %p caps: %p",
-      gst_player_stream_info_get_stream_type_nick (s), stream_index,
+      gst_player_stream_info_get_stream_type (s), stream_index,
       s->tags, s->caps);
 
   gst_player_stream_info_update (self, s);
@@ -1658,7 +1658,7 @@ gst_player_streams_info_create (GstPlayer * self,
             (media_info->subtitle_stream_list, s);
 
       GST_DEBUG_OBJECT (self, "create %s stream stream_index: %d",
-          gst_player_stream_info_get_stream_type_nick (s), i);
+          gst_player_stream_info_get_stream_type (s), i);
     }
 
     gst_player_stream_info_update_tags_and_caps (self, s);

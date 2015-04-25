@@ -47,13 +47,13 @@ typedef struct _GstPlayerStreamInfo GstPlayerStreamInfo;
 typedef GObjectClass GstPlayerStreamInfoClass;
 GType gst_player_stream_info_get_type (void);
 
-gint          gst_player_stream_info_get_stream_index
+gint          gst_player_stream_info_get_index
                 (const GstPlayerStreamInfo *info);
-const gchar*  gst_player_stream_info_get_stream_type_nick
+const gchar*  gst_player_stream_info_get_stream_type
                 (const GstPlayerStreamInfo *info);
-GstTagList*   gst_player_stream_info_get_stream_tags
+GstTagList*   gst_player_stream_info_get_tags
                 (const GstPlayerStreamInfo *info);
-GstCaps*      gst_player_stream_info_get_stream_caps
+GstCaps*      gst_player_stream_info_get_caps
                 (const GstPlayerStreamInfo *info);
 
 #define GST_TYPE_PLAYER_VIDEO_INFO \
