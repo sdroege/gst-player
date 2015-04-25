@@ -44,7 +44,7 @@ G_BEGIN_DECLS
  * #GstPlayerVideoInfo, #GstPlayerAudioInfo, #GstPlayerSubtitleInfo.
  */
 typedef struct _GstPlayerStreamInfo GstPlayerStreamInfo;
-typedef GObjectClass GstPlayerStreamInfoClass;
+typedef struct _GstPlayerStreamInfoClass GstPlayerStreamInfoClass;
 GType gst_player_stream_info_get_type (void);
 
 gint          gst_player_stream_info_get_index
@@ -73,7 +73,7 @@ GstCaps*      gst_player_stream_info_get_caps
  * #GstPlayerStreamInfo specific to video streams.
  */
 typedef struct _GstPlayerVideoInfo GstPlayerVideoInfo;
-typedef GObjectClass GstPlayerVideoInfoClass;
+typedef struct _GstPlayerVideoInfoClass GstPlayerVideoInfoClass;
 GType gst_player_video_info_get_type (void);
 
 gint          gst_player_video_info_get_bitrate
@@ -106,7 +106,7 @@ void          gst_player_video_info_get_pixel_aspect_ratio
  * #GstPlayerStreamInfo specific to audio streams.
  */
 typedef struct _GstPlayerAudioInfo GstPlayerAudioInfo;
-typedef GObjectClass GstPlayerAudioInfoClass;
+typedef struct _GstPlayerAudioInfoClass GstPlayerAudioInfoClass;
 GType gst_player_audio_info_get_type (void);
 
 gint          gst_player_audio_info_get_channels
@@ -137,7 +137,7 @@ const gchar*  gst_player_audio_info_get_language
  * #GstPlayerStreamInfo specific to subtitle streams.
  */
 typedef struct _GstPlayerSubtitleInfo GstPlayerSubtitleInfo;
-typedef GObjectClass GstPlayerSubtitleInfoClass;
+typedef struct _GstPlayerSubtitleInfoClass GstPlayerSubtitleInfoClass;
 GType gst_player_subtitle_info_get_type (void);
 
 const gchar*  gst_player_subtitle_info_get_language
@@ -160,7 +160,7 @@ const gchar*  gst_player_subtitle_info_get_language
  * Structure containing the media information of a URI.
  */
 typedef struct _GstPlayerMediaInfo GstPlayerMediaInfo;
-typedef GObjectClass GstPlayerMediaInfoClass;
+typedef struct _GstPlayerMediaInfoClass GstPlayerMediaInfoClass;
 GType gst_player_media_info_get_type (void);
 
 const gchar*  gst_player_media_info_get_uri

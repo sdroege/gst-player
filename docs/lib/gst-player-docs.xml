@@ -12,9 +12,10 @@
 
   <chapter>
     <xi:include href="xml/gstplayer.xml"/>
+    <xi:include href="xml/gstplayer-mediainfo.xml"/>
   </chapter>
 
-  <chapter id="rtsp-server-hierarchy">
+  <chapter id="player-hierarchy">
     <title>Object Hierarchy</title>
     <xi:include href="xml/tree_index.sgml"/>
   </chapter>

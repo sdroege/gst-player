@@ -32,11 +32,21 @@ struct _GstPlayerStreamInfo
   GstTagList  *tags;
 };
 
+struct _GstPlayerStreamInfoClass
+{
+  GObjectClass parent_class;
+};
+
 struct _GstPlayerSubtitleInfo
 {
   GstPlayerStreamInfo  parent;
 
   gchar *language;
+};
+
+struct _GstPlayerSubtitleInfoClass
+{
+  GstPlayerStreamInfoClass parent_class;
 };
 
 struct _GstPlayerAudioInfo
@@ -50,6 +60,11 @@ struct _GstPlayerAudioInfo
   guint max_bitrate;
 
   gchar *language;
+};
+
+struct _GstPlayerAudioInfoClass
+{
+  GstPlayerStreamInfoClass parent_class;
 };
 
 struct _GstPlayerVideoInfo
@@ -67,6 +82,11 @@ struct _GstPlayerVideoInfo
   guint max_bitrate;
 };
 
+struct _GstPlayerVideoInfoClass
+{
+  GstPlayerStreamInfoClass parent_class;
+};
+
 struct _GstPlayerMediaInfo
 {
   GObject parent;
@@ -79,6 +99,11 @@ struct _GstPlayerMediaInfo
   GList *subtitle_stream_list;
 
   GstClockTime  duration;
+};
+
+struct _GstPlayerMediaInfoClass
+{
+  GObjectClass parent_class;
 };
 
 G_GNUC_INTERNAL GstPlayerMediaInfo*   gst_player_media_info_new

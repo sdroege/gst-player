@@ -18,11 +18,18 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:gstplayer-mediainfo
+ * @short_description: GStreamer Player Media Information API
+ *
+ */
+
 #include "gstplayer-media-info.h"
 #include "gstplayer-media-info-private.h"
 
 /* Per-stream information */
-G_DEFINE_TYPE (GstPlayerStreamInfo, gst_player_stream_info, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (GstPlayerStreamInfo, gst_player_stream_info,
+    G_TYPE_OBJECT);
 
 static void
 gst_player_stream_info_init (GstPlayerStreamInfo * sinfo)
@@ -45,9 +52,11 @@ gst_player_stream_info_finalize (GObject * object)
 }
 
 static void
-gst_player_stream_info_class_init (GObjectClass * klass)
+gst_player_stream_info_class_init (GstPlayerStreamInfoClass * klass)
 {
-  klass->finalize = gst_player_stream_info_finalize;
+  GObjectClass *gobject_class = (GObjectClass *) klass;
+
+  gobject_class->finalize = gst_player_stream_info_finalize;
 }
 
 /**
@@ -132,7 +141,7 @@ gst_player_video_info_init (GstPlayerVideoInfo * info)
 }
 
 static void
-gst_player_video_info_class_init (GObjectClass * klass)
+gst_player_video_info_class_init (GstPlayerVideoInfoClass * klass)
 {
   /* nothing to do here */
 }
@@ -247,9 +256,11 @@ gst_player_audio_info_finalize (GObject * object)
 }
 
 static void
-gst_player_audio_info_class_init (GObjectClass * klass)
+gst_player_audio_info_class_init (GstPlayerAudioInfoClass * klass)
 {
-  klass->finalize = gst_player_audio_info_finalize;
+  GObjectClass *gobject_class = (GObjectClass *) klass;
+
+  gobject_class->finalize = gst_player_audio_info_finalize;
 }
 
 /**
@@ -344,9 +355,11 @@ gst_player_subtitle_info_finalize (GObject * object)
 }
 
 static void
-gst_player_subtitle_info_class_init (GObjectClass * klass)
+gst_player_subtitle_info_class_init (GstPlayerSubtitleInfoClass * klass)
 {
-  klass->finalize = gst_player_subtitle_info_finalize;
+  GObjectClass *gobject_class = (GObjectClass *) klass;
+
+  gobject_class->finalize = gst_player_subtitle_info_finalize;
 }
 
 /**
