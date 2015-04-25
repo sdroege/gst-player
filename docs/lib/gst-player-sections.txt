@@ -60,7 +60,6 @@ GST_PLAYER_CAST
 GST_PLAYER_CLASS
 GST_PLAYER_GET_CLASS
 GST_TYPE_PLAYER
-GstPlayerPrivate
 GstPlayerClass
 gst_player_get_type
 
