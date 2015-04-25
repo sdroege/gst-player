@@ -848,7 +848,8 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
     g_mutex_unlock (&self->priv->lock);
 
     GST_DEBUG_OBJECT (self, "Buffering finished - seek pending");
-  } else if (percent == 100 && self->priv->target_state >= GST_STATE_PLAYING) {
+  } else if (percent == 100 && self->priv->target_state >= GST_STATE_PLAYING
+      && self->priv->current_state >= GST_STATE_PAUSED) {
     GstStateChangeReturn state_ret;
 
     g_mutex_unlock (&self->priv->lock);
