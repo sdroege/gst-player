@@ -1269,7 +1269,7 @@ static void
 free_media_info_updated_signal_data (MediaInfoUpdatedSignalData * data)
 {
   g_object_unref (data->info);
-  g_slice_free (MediaInfoUpdatedSignalData, data);
+  g_free (data);
 }
 
 /*
@@ -1283,7 +1283,7 @@ static void
 emit_media_info_updated_signal (GstPlayer * self)
 {
   if (self->priv->dispatch_to_main_context) {
-    MediaInfoUpdatedSignalData *data = g_slice_new (MediaInfoUpdatedSignalData);
+    MediaInfoUpdatedSignalData *data = g_new (MediaInfoUpdatedSignalData, 1);
     data->player = self;
     g_mutex_lock (&self->priv->lock);
     data->info = gst_player_media_info_copy (self->priv->media_info);
