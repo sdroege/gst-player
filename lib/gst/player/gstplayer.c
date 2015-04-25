@@ -648,6 +648,11 @@ emit_error (GstPlayer * self, GError * err)
   self->priv->buffering = 100;
 
   g_mutex_lock (&self->priv->lock);
+  if (self->priv->media_info) {
+    g_object_unref (self->priv->media_info);
+    self->priv->media_info = NULL;
+  }
+
   self->priv->seek_pending = FALSE;
   if (self->priv->seek_source) {
     g_source_destroy (self->priv->seek_source);
@@ -1038,6 +1043,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       GST_DEBUG_OBJECT (self, "Initial PAUSED - pre-rolled");
 
       g_mutex_lock (&self->priv->lock);
+      if (self->priv->media_info)
+        g_object_unref (self->priv->media_info);
       self->priv->media_info = gst_player_media_info_create (self);
       g_mutex_unlock (&self->priv->lock);
       emit_media_info_updated_signal (self);
@@ -1838,9 +1845,16 @@ gst_player_main (gpointer data)
   remove_tick_source (self);
   remove_ready_timeout_source (self);
 
+  g_mutex_lock (&self->priv->lock);
+  if (self->priv->media_info) {
+    g_object_unref (self->priv->media_info);
+    self->priv->media_info = NULL;
+  }
+
   if (self->priv->seek_source)
     g_source_unref (self->priv->seek_source);
   self->priv->seek_source = NULL;
+  g_mutex_unlock (&self->priv->lock);
 
   g_main_context_pop_thread_default (self->priv->context);
   g_main_context_unref (self->priv->context);
@@ -2028,11 +2042,12 @@ gst_player_stop_internal (gpointer user_data)
   gst_bus_set_flushing (self->priv->bus, FALSE);
   change_state (self, GST_PLAYER_STATE_STOPPED);
   self->priv->buffering = 100;
+  g_mutex_lock (&self->priv->lock);
   if (self->priv->media_info) {
     g_object_unref (self->priv->media_info);
     self->priv->media_info = NULL;
   }
-  g_mutex_lock (&self->priv->lock);
+
   self->priv->seek_pending = FALSE;
   if (self->priv->seek_source) {
     g_source_destroy (self->priv->seek_source);
