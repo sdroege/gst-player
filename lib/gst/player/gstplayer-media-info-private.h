@@ -94,6 +94,7 @@ struct _GstPlayerMediaInfo
   GObject parent;
 
   gchar *uri;
+  gboolean seekable;
 
   GList *stream_list;
   GList *audio_stream_list;

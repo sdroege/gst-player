@@ -402,6 +402,7 @@ static void
 gst_player_media_info_init (GstPlayerMediaInfo * info)
 {
   info->duration = -1;
+  info->seekable = FALSE;
 }
 
 static void
@@ -538,6 +539,7 @@ gst_player_media_info_copy (GstPlayerMediaInfo * ref)
 
   info = gst_player_media_info_new (ref->uri);
   info->duration = ref->duration;
+  info->seekable = ref->seekable;
 
   for (l = ref->stream_list; l != NULL; l = l->next) {
     GstPlayerStreamInfo *s;
@@ -599,6 +601,20 @@ gst_player_media_info_get_uri (const GstPlayerMediaInfo * info)
   g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), NULL);
 
   return info->uri;
+}
+
+/**
+ * gst_player_media_info_is_seekable:
+ * @info: a #GstPlayerMediaInfo
+ *
+ * Returns: %TRUE if the media is seekable.
+ */
+gboolean
+gst_player_media_info_is_seekable (const GstPlayerMediaInfo * info)
+{
+  g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), FALSE);
+
+  return info->seekable;
 }
 
 /**

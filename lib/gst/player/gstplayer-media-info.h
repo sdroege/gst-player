@@ -167,6 +167,8 @@ GType gst_player_media_info_get_type (void);
 
 const gchar*  gst_player_media_info_get_uri
                 (const GstPlayerMediaInfo *info);
+gboolean      gst_player_media_info_is_seekable
+                (const GstPlayerMediaInfo *info);
 GstClockTime  gst_player_media_info_get_duration
                 (const GstPlayerMediaInfo *info);
 GList*        gst_player_media_info_get_stream_list

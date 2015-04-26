@@ -1126,8 +1126,16 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       if (self->seek_pending) {
         self->seek_pending = FALSE;
 
-        /* A new seek is pending */
-        if (self->seek_source) {
+        if (!self->media_info->seekable) {
+          GST_DEBUG_OBJECT (self, "Media is not seekable");
+          if (self->seek_source) {
+            g_source_destroy (self->seek_source);
+            g_source_unref (self->seek_source);
+            self->seek_source = NULL;
+          }
+          self->seek_position = GST_CLOCK_TIME_NONE;
+          self->last_seek_time = GST_CLOCK_TIME_NONE;
+        } else if (self->seek_source) {
           GST_DEBUG_OBJECT (self, "Seek finished but new seek is pending");
           gst_player_seek_internal_locked (self);
         } else {
@@ -1783,10 +1791,16 @@ static GstPlayerMediaInfo *
 gst_player_media_info_create (GstPlayer * self)
 {
   GstPlayerMediaInfo *media_info;
+  GstQuery *query;
 
   GST_DEBUG_OBJECT (self, "begin");
   media_info = gst_player_media_info_new (self->uri);
   media_info->duration = gst_player_get_duration (self);
+
+  query = gst_query_new_seeking (GST_FORMAT_TIME);
+  if (gst_element_query (self->playbin, query))
+    gst_query_parse_seeking (query, NULL, &media_info->seekable, NULL, NULL);
+  gst_query_unref (query);
 
   /* create audio/video/sub streams */
   gst_player_streams_info_create (self, media_info, "n-video",
@@ -2221,6 +2235,12 @@ gst_player_seek (GstPlayer * self, GstClockTime position)
   g_return_if_fail (GST_CLOCK_TIME_IS_VALID (position));
 
   g_mutex_lock (&self->lock);
+  if (self->media_info && !self->media_info->seekable) {
+    GST_DEBUG_OBJECT (self, "Media is not seekable");
+    g_mutex_unlock (&self->lock);
+    return;
+  }
+
   self->seek_position = position;
 
   /* If there is no seek being dispatch to the main context currently do that,
