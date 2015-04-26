@@ -87,6 +87,7 @@ gst_player_media_info_get_stream_list
 gst_player_stream_info_get_index
 gst_player_stream_info_get_caps
 gst_player_stream_info_get_tags
+gst_player_stream_info_get_codec
 gst_player_stream_info_get_stream_type
 
 gst_player_audio_info_get_bitrate

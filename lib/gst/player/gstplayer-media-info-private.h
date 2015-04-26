@@ -27,6 +27,8 @@ struct _GstPlayerStreamInfo
 {
   GObject parent;
 
+  gchar *codec;
+
   GstCaps *caps;
   gint stream_index;
   GstTagList  *tags;
