@@ -55,6 +55,7 @@ GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@G
 		--libtool="${LIBTOOL}" \
 		--pkg gobject-2.0 \
 		--pkg gstreamer-1.0 \
+		--pkg gstreamer-audio-1.0 \
 		--pkg gstreamer-video-1.0 \
 		--pkg gstreamer-tag-1.0 \
 		--pkg gstreamer-pbutils-1.0 \
