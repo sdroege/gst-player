@@ -122,8 +122,8 @@ gst_player_stream_info_get_tags (const GstPlayerStreamInfo * info)
  *
  * Returns: codec string or NULL on unknown.
  */
-const gchar*
-gst_player_stream_info_get_codec (const GstPlayerStreamInfo *info)
+const gchar *
+gst_player_stream_info_get_codec (const GstPlayerStreamInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), NULL);
 

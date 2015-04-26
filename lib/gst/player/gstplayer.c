@@ -1581,8 +1581,8 @@ gst_player_stream_info_update (GstPlayer * self, GstPlayerStreamInfo * s)
     gst_player_subtitle_info_update (self, s);
 }
 
-static gchar*
-stream_info_get_codec (GstPlayerStreamInfo *s)
+static gchar *
+stream_info_get_codec (GstPlayerStreamInfo * s)
 {
   const gchar *type;
   GstTagList *tags;
@@ -1606,7 +1606,7 @@ stream_info_get_codec (GstPlayerStreamInfo *s)
     GstCaps *caps;
     caps = gst_player_stream_info_get_caps (s);
     if (caps) {
-     codec = gst_pb_utils_get_codec_description (caps);
+      codec = gst_pb_utils_get_codec_description (caps);
     }
   }
 
