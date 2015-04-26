@@ -42,6 +42,9 @@ gst_player_stream_info_finalize (GObject * object)
 {
   GstPlayerStreamInfo *sinfo = GST_PLAYER_STREAM_INFO (object);
 
+  if (sinfo->codec)
+    g_free (sinfo->codec);
+
   if (sinfo->caps)
     gst_caps_unref (sinfo->caps);
 
@@ -109,6 +112,22 @@ gst_player_stream_info_get_tags (const GstPlayerStreamInfo * info)
   g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), NULL);
 
   return info->tags;
+}
+
+/**
+ * gst_player_stream_info_get_codec:
+ * @info: a #GstPlayerStreamInfo
+ *
+ * A string describing codec used in #GstPlayerStreamInfo.
+ *
+ * Returns: codec string or NULL on unknown.
+ */
+const gchar*
+gst_player_stream_info_get_codec (const GstPlayerStreamInfo *info)
+{
+  g_return_val_if_fail (GST_IS_PLAYER_STREAM_INFO (info), -1);
+
+  return info->codec;
 }
 
 /**
@@ -502,6 +521,8 @@ gst_player_stream_info_copy (GstPlayerStreamInfo * ref)
     info->tags = gst_tag_list_copy (ref->tags);
   if (ref->caps)
     info->caps = gst_caps_copy (ref->caps);
+  if (ref->codec)
+    info->codec = g_strdup (ref->codec);
 
   return info;
 }

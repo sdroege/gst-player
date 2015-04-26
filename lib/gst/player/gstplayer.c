@@ -48,6 +48,7 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 #include <gst/tag/tag.h>
+#include <gst/pbutils/descriptions.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);
 #define GST_CAT_DEFAULT gst_player_debug
@@ -1580,6 +1581,38 @@ gst_player_stream_info_update (GstPlayer * self, GstPlayerStreamInfo * s)
     gst_player_subtitle_info_update (self, s);
 }
 
+static gchar*
+stream_info_get_codec (GstPlayerStreamInfo *s)
+{
+  const gchar *type;
+  GstTagList *tags;
+  gchar *codec = NULL;
+
+  if (GST_IS_PLAYER_VIDEO_INFO (s))
+    type = GST_TAG_VIDEO_CODEC;
+  else if (GST_IS_PLAYER_AUDIO_INFO (s))
+    type = GST_TAG_AUDIO_CODEC;
+  else
+    type = GST_TAG_SUBTITLE_CODEC;
+
+  tags = gst_player_stream_info_get_tags (s);
+  if (tags) {
+    gst_tag_list_get_string (tags, type, &codec);
+    if (!codec)
+      gst_tag_list_get_string (tags, GST_TAG_CODEC, &codec);
+  }
+
+  if (!codec) {
+    GstCaps *caps;
+    caps = gst_player_stream_info_get_caps (s);
+    if (caps) {
+     codec = gst_pb_utils_get_codec_description (caps);
+    }
+  }
+
+  return codec;
+}
+
 static void
 gst_player_stream_info_update_tags_and_caps (GstPlayer * self,
     GstPlayerStreamInfo * s)
@@ -1605,6 +1638,10 @@ gst_player_stream_info_update_tags_and_caps (GstPlayer * self,
   if (s->caps)
     gst_caps_unref (s->caps);
   s->caps = get_caps (self, stream_index, G_OBJECT_TYPE (s));
+
+  if (s->codec)
+    g_free (s->codec);
+  s->codec = stream_info_get_codec (s);
 
   GST_DEBUG_OBJECT (self, "%s index: %d tags: %p caps: %p",
       gst_player_stream_info_get_stream_type (s), stream_index,
