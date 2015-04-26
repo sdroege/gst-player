@@ -55,6 +55,8 @@ GstTagList*   gst_player_stream_info_get_tags
                 (const GstPlayerStreamInfo *info);
 GstCaps*      gst_player_stream_info_get_caps
                 (const GstPlayerStreamInfo *info);
+const gchar*  gst_player_stream_info_get_codec
+                (const GstPlayerStreamInfo *info);
 
 #define GST_TYPE_PLAYER_VIDEO_INFO \
   (gst_player_video_info_get_type ())
@@ -175,7 +177,6 @@ GList*        gst_player_get_audio_streams
                 (const GstPlayerMediaInfo *info);
 GList*        gst_player_get_subtitle_streams
                 (const GstPlayerMediaInfo *info);
-
 G_END_DECLS
 
 #endif /* __GST_PLAYER_MEDIA_INFO_H */
