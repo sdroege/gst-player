@@ -71,6 +71,10 @@ enum
   PROP_URI,
   PROP_POSITION,
   PROP_DURATION,
+  PROP_MEDIA_INFO,
+  PROP_CURRENT_AUDIO_TRACK,
+  PROP_CURRENT_VIDEO_TRACK,
+  PROP_CURRENT_SUBTITLE_TRACK,
   PROP_VOLUME,
   PROP_MUTE,
   PROP_WINDOW_HANDLE,
@@ -222,6 +226,26 @@ gst_player_class_init (GstPlayerClass * klass)
   param_specs[PROP_POSITION] =
       g_param_spec_uint64 ("position", "Position", "Current Position",
       0, G_MAXUINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_MEDIA_INFO] =
+      g_param_spec_object ("media-info", "Media Info",
+      "Current media information", GST_TYPE_PLAYER_MEDIA_INFO,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_CURRENT_AUDIO_TRACK] =
+      g_param_spec_object ("current-audio-track", "Current Audio Track",
+      "Current audio track information", GST_TYPE_PLAYER_AUDIO_INFO,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_CURRENT_VIDEO_TRACK] =
+      g_param_spec_object ("current-video-track", "Current Video Track",
+      "Current video track information", GST_TYPE_PLAYER_VIDEO_INFO,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_CURRENT_SUBTITLE_TRACK] =
+      g_param_spec_object ("current-subtitle-track", "Current Subtitle Track",
+      "Current audio subtitle information", GST_TYPE_PLAYER_SUBTITLE_INFO,
+      G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_DURATION] =
       g_param_spec_uint64 ("duration", "Duration", "Duration",
@@ -402,6 +426,33 @@ gst_player_get_property (GObject * object, guint prop_id,
       g_value_set_uint64 (value, duration);
       GST_TRACE_OBJECT (self, "Returning duration=%" GST_TIME_FORMAT,
           GST_TIME_ARGS (g_value_get_uint64 (value)));
+      break;
+    }
+    case PROP_MEDIA_INFO:{
+      GstPlayerMediaInfo *media_info = gst_player_get_media_info (self);
+      g_value_set_object (value, media_info);
+      g_object_unref (media_info);
+      break;
+    }
+    case PROP_CURRENT_AUDIO_TRACK:{
+      GstPlayerAudioInfo *audio_info =
+          gst_player_get_current_audio_track (self);
+      g_value_set_object (value, audio_info);
+      g_object_unref (audio_info);
+      break;
+    }
+    case PROP_CURRENT_VIDEO_TRACK:{
+      GstPlayerVideoInfo *video_info =
+          gst_player_get_current_video_track (self);
+      g_value_set_object (value, video_info);
+      g_object_unref (video_info);
+      break;
+    }
+    case PROP_CURRENT_SUBTITLE_TRACK:{
+      GstPlayerSubtitleInfo *subtitle_info =
+          gst_player_get_current_subtitle_track (self);
+      g_value_set_object (value, subtitle_info);
+      g_object_unref (subtitle_info);
       break;
     }
     case PROP_VOLUME:
