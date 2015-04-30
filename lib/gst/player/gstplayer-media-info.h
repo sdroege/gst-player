@@ -179,6 +179,14 @@ GList*        gst_player_get_audio_streams
                 (const GstPlayerMediaInfo *info);
 GList*        gst_player_get_subtitle_streams
                 (const GstPlayerMediaInfo *info);
+GstTagList*   gst_player_media_info_get_tags
+                (const GstPlayerMediaInfo *info);
+const gchar*  gst_player_media_info_get_title
+                (const GstPlayerMediaInfo *info);
+const gchar*  gst_player_media_info_get_container_format
+                (const GstPlayerMediaInfo *info);
+GstSample*    gst_player_media_info_get_image_sample
+                (const GstPlayerMediaInfo *info);
 G_END_DECLS
 
 #endif /* __GST_PLAYER_MEDIA_INFO_H */
