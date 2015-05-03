@@ -39,8 +39,7 @@ gir_headers=$(patsubst %,$(srcdir)/%, $(libgstplayer_HEADERS))
 gir_sources=$(patsubst %,$(srcdir)/%, $(libgstplayer_@GST_PLAYER_API_VERSION@_la_SOURCES))
 
 GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@GST_PLAYER_API_VERSION@.la
-	$(AM_V_GEN)PKG_CONFIG_PATH="$(GST_PKG_CONFIG_PATH)" \
-		$(INTROSPECTION_SCANNER) -v --namespace GstPlayer \
+	$(AM_V_GEN)$(INTROSPECTION_SCANNER) -v --namespace GstPlayer \
 		--nsversion=@GST_PLAYER_API_VERSION@ \
 		--warn-all \
 		--strip-prefix=Gst \
