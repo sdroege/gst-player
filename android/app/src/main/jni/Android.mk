@@ -2,17 +2,24 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+APP_OPTIM := release
+
+GST_PATH := $(LOCAL_PATH)/../../../../../
+
 LOCAL_MODULE    := gstplayer
-LOCAL_SRC_FILES := player.c ../../lib/gst/player/gstplayer.c
+LOCAL_SRC_FILES := player.c  \
+    $(GST_PATH)/lib/gst/player/gstplayer.c \
+    $(GST_PATH)/lib/gst/player/gstplayer-media-info.c
 LOCAL_SHARED_LIBRARIES := gstreamer_android
 LOCAL_LDLIBS := -llog -landroid
+LOCAL_CFLAGS := -I$(GST_PATH)/lib/
 include $(BUILD_SHARED_LIBRARY)
 
 ifndef GSTREAMER_ROOT
-ifndef GSTREAMER_ROOT_ANDROID
-$(error GSTREAMER_ROOT_ANDROID is not defined!)
+ifndef GSTREAMER_SDK_ROOT_ANDROID
+$(error GSTREAMER_SDK_ROOT_ANDROID is not defined!)
 endif
-GSTREAMER_ROOT        := $(GSTREAMER_ROOT_ANDROID)
+GSTREAMER_ROOT        := $(GSTREAMER_SDK_ROOT_ANDROID)
 endif
 
 GSTREAMER_NDK_BUILD_PATH  := $(GSTREAMER_ROOT)/share/gst-android/ndk-build/
