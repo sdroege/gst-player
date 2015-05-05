@@ -2,14 +2,13 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-APP_OPTIM := release
-
 GST_PATH := $(LOCAL_PATH)/../../../../../
 
 LOCAL_MODULE    := gstplayer
 LOCAL_SRC_FILES := player.c  \
     $(GST_PATH)/lib/gst/player/gstplayer.c \
     $(GST_PATH)/lib/gst/player/gstplayer-media-info.c
+
 LOCAL_SHARED_LIBRARIES := gstreamer_android
 LOCAL_LDLIBS := -llog -landroid
 LOCAL_CFLAGS := -I$(GST_PATH)/lib/
