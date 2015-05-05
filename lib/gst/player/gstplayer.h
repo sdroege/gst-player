@@ -97,12 +97,15 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
 
+gboolean      gst_player_get_video_track_enabled      (GstPlayer    * player);
 void          gst_player_set_video_track_enabled      (GstPlayer    * player,
                                                        gboolean enabled);
 
+gboolean      gst_player_get_audio_track_enabled      (GstPlayer    * player);
 void          gst_player_set_audio_track_enabled      (GstPlayer    * player,
                                                        gboolean enabled);
 
+gboolean      gst_player_get_subtitle_track_enabled   (GstPlayer    * player);
 void          gst_player_set_subtitle_track_enabled   (GstPlayer    * player,
                                                        gboolean enabled);
 

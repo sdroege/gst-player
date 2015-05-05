@@ -1284,6 +1284,16 @@ element_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   }
 }
 
+static gint
+player_get_flag (GstPlayer * self, gint pos)
+{
+  gint flags;
+
+  g_object_get (self->playbin, "flags", &flags, NULL);
+
+  return flags & pos;
+}
+
 static void
 player_set_flag (GstPlayer * self, gint pos)
 {
@@ -2605,21 +2615,17 @@ gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
 }
 
 /*
- * gst_player_set_audio_enabled:
+ * gst_player_get_video_track_enabled:
  * @player: #GstPlayer instance
- * @enabled: TRUE or FALSE
  *
- * Enable or disable the current audio track.
+ * Whether the current video track is enabled.
  */
-void
-gst_player_set_audio_track_enabled (GstPlayer * self, gboolean enabled)
+gboolean
+gst_player_get_video_track_enabled (GstPlayer * self)
 {
-  g_return_if_fail (GST_IS_PLAYER (self));
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
 
-  if (enabled)
-    player_set_flag (self, GST_PLAY_FLAG_AUDIO);
-  else
-    player_clear_flag (self, GST_PLAY_FLAG_AUDIO);
+  return player_get_flag(self, GST_PLAY_FLAG_VIDEO) == GST_PLAY_FLAG_VIDEO;
 }
 
 /*
@@ -2638,6 +2644,52 @@ gst_player_set_video_track_enabled (GstPlayer * self, gboolean enabled)
     player_set_flag (self, GST_PLAY_FLAG_VIDEO);
   else
     player_clear_flag (self, GST_PLAY_FLAG_VIDEO);
+}
+
+/*
+ * gst_player_get_audio_track_enabled:
+ * @player: #GstPlayer instance
+ *
+ * Whether the current audio track is enabled.
+ */
+gboolean
+gst_player_get_audio_track_enabled (GstPlayer * self)
+{
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  return player_get_flag(self, GST_PLAY_FLAG_AUDIO) == GST_PLAY_FLAG_AUDIO;
+}
+
+/*
+ * gst_player_set_audio_enabled:
+ * @player: #GstPlayer instance
+ * @enabled: TRUE or FALSE
+ *
+ * Enable or disable the current audio track.
+ */
+void
+gst_player_set_audio_track_enabled (GstPlayer * self, gboolean enabled)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  if (enabled)
+    player_set_flag (self, GST_PLAY_FLAG_AUDIO);
+  else
+    player_clear_flag (self, GST_PLAY_FLAG_AUDIO);
+}
+
+/*
+ * gst_player_get_subtitle_track_enabled:
+ * @player: #GstPlayer instance
+ *
+ * Whether the current subtitle track is enabled.
+ */
+gboolean
+gst_player_get_subtitle_track_enabled (GstPlayer * self)
+{
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  return player_get_flag(self, GST_PLAY_FLAG_SUBTITLE) == GST_PLAY_FLAG_SUBTITLE;
 }
 
 /*
