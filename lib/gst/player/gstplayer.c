@@ -2723,6 +2723,7 @@ gst_player_set_audio_track (GstPlayer * self, gint stream_index)
   }
 
   g_object_set (G_OBJECT (self->playbin), "current-audio", stream_index, NULL);
+  GST_DEBUG_OBJECT (self, "set stream index '%d'", stream_index);
   return TRUE;
 }
 
@@ -2749,6 +2750,7 @@ gst_player_set_video_track (GstPlayer * self, gint stream_index)
   }
 
   g_object_set (G_OBJECT (self->playbin), "current-video", stream_index, NULL);
+  GST_DEBUG_OBJECT (self, "set stream index '%d'", stream_index);
   return TRUE;
 }
 
@@ -2774,6 +2776,7 @@ gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
   }
 
   g_object_set (G_OBJECT (self->playbin), "current-text", stream_index, NULL);
+  GST_DEBUG_OBJECT (self, "set stream index '%d'", stream_index);
   return TRUE;
 }
 
@@ -2793,6 +2796,8 @@ gst_player_set_audio_track_enabled (GstPlayer * self, gboolean enabled)
     player_set_flag (self, GST_PLAY_FLAG_AUDIO);
   else
     player_clear_flag (self, GST_PLAY_FLAG_AUDIO);
+
+  GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
 /*
@@ -2811,6 +2816,8 @@ gst_player_set_video_track_enabled (GstPlayer * self, gboolean enabled)
     player_set_flag (self, GST_PLAY_FLAG_VIDEO);
   else
     player_clear_flag (self, GST_PLAY_FLAG_VIDEO);
+
+  GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
 /*
@@ -2829,6 +2836,8 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
     player_set_flag (self, GST_PLAY_FLAG_SUBTITLE);
   else
     player_clear_flag (self, GST_PLAY_FLAG_SUBTITLE);
+
+  GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
 #define C_ENUM(v) ((gint) v)
