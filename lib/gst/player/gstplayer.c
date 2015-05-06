@@ -185,11 +185,11 @@ static void gst_player_subtitle_info_update (GstPlayer * self,
 
 static void emit_media_info_updated_signal (GstPlayer * self);
 
-static void * get_title (GstTagList * tags);
-static void * get_container_format (GstTagList * tags);
-static void * get_from_tags (GstPlayer * self, GstPlayerMediaInfo * media_info,
-    void * (*func) (GstTagList *));
-static void * get_cover_sample (GstTagList * tags);
+static void *get_title (GstTagList * tags);
+static void *get_container_format (GstTagList * tags);
+static void *get_from_tags (GstPlayer * self, GstPlayerMediaInfo * media_info,
+    void *(*func) (GstTagList *));
+static void *get_cover_sample (GstTagList * tags);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -1274,7 +1274,8 @@ tags_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
    * http://cgit.freedesktop.org/gstreamer/gstreamer/commit/?id=18b058100940bdcaed86fa412e3582a02871f995
    */
   GST_DEBUG_OBJECT (self, "recieved %s tags",
-    gst_tag_list_get_scope(tags) == GST_TAG_SCOPE_GLOBAL ? "global":"stream");
+      gst_tag_list_get_scope (tags) ==
+      GST_TAG_SCOPE_GLOBAL ? "global" : "stream");
 
   if (gst_tag_list_get_scope (tags) == GST_TAG_SCOPE_GLOBAL) {
     g_mutex_lock (&self->lock);
@@ -1285,8 +1286,7 @@ tags_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       media_info_update (self, self->media_info);
       g_mutex_unlock (&self->lock);
       emit_media_info_updated_signal (self);
-    }
-    else {
+    } else {
       if (self->global_tags)
         gst_tag_list_unref (self->global_tags);
       self->global_tags = gst_tag_list_ref (tags);
@@ -1890,8 +1890,8 @@ get_container_format (GstTagList * tags)
 }
 
 static void *
-get_from_tags (GstPlayer *self, GstPlayerMediaInfo *media_info,
-    void * (*func) (GstTagList *))
+get_from_tags (GstPlayer * self, GstPlayerMediaInfo * media_info,
+    void *(*func) (GstTagList *))
 {
   GList *l;
   void *ret = NULL;
@@ -1904,11 +1904,10 @@ get_from_tags (GstPlayer *self, GstPlayerMediaInfo *media_info,
 
   /* if global tag does not exit then try video and audio streams */
   GST_DEBUG_OBJECT (self, "trying video tags");
-  for (l = gst_player_get_video_streams (media_info);
-        l != NULL; l = l->next) {
+  for (l = gst_player_get_video_streams (media_info); l != NULL; l = l->next) {
     GstTagList *tags;
 
-    tags = gst_player_stream_info_get_tags ((GstPlayerStreamInfo*)l->data);
+    tags = gst_player_stream_info_get_tags ((GstPlayerStreamInfo *) l->data);
     if (tags)
       ret = func (tags);
 
@@ -1917,11 +1916,10 @@ get_from_tags (GstPlayer *self, GstPlayerMediaInfo *media_info,
   }
 
   GST_DEBUG_OBJECT (self, "trying audio tags");
-  for (l = gst_player_get_audio_streams (media_info);
-        l != NULL; l = l->next) {
+  for (l = gst_player_get_audio_streams (media_info); l != NULL; l = l->next) {
     GstTagList *tags;
 
-    tags = gst_player_stream_info_get_tags ((GstPlayerStreamInfo*)l->data);
+    tags = gst_player_stream_info_get_tags ((GstPlayerStreamInfo *) l->data);
     if (tags)
       ret = func (tags);
 
@@ -1954,7 +1952,7 @@ gst_player_media_info_create (GstPlayer * self)
   GST_DEBUG_OBJECT (self, "begin");
   media_info = gst_player_media_info_new (self->uri);
   media_info->duration = gst_player_get_duration (self);
-  media_info->tags  = self->global_tags;
+  media_info->tags = self->global_tags;
   self->global_tags = NULL;
 
   query = gst_query_new_seeking (GST_FORMAT_TIME);
@@ -1971,12 +1969,13 @@ gst_player_media_info_create (GstPlayer * self)
       GST_TYPE_PLAYER_SUBTITLE_INFO);
 
   media_info->title = get_from_tags (self, media_info, get_title);
-  media_info->container = get_from_tags (self, media_info, get_container_format);
-  media_info->image_sample= get_from_tags (self, media_info, get_cover_sample);
+  media_info->container =
+      get_from_tags (self, media_info, get_container_format);
+  media_info->image_sample = get_from_tags (self, media_info, get_cover_sample);
 
   GST_DEBUG_OBJECT (self, "uri: %s title: %s duration: %" GST_TIME_FORMAT
       " seekable: %s container: %s image_sample %p",
-      media_info->uri, media_info->title,GST_TIME_ARGS(media_info->duration),
+      media_info->uri, media_info->title, GST_TIME_ARGS (media_info->duration),
       media_info->seekable ? "yes" : "no", media_info->container,
       media_info->image_sample);
 
@@ -2073,8 +2072,7 @@ gst_player_main (gpointer data)
       G_CALLBACK (request_state_cb), self);
   g_signal_connect (G_OBJECT (bus), "message::element",
       G_CALLBACK (element_cb), self);
-  g_signal_connect (G_OBJECT (bus), "message::tag",
-      G_CALLBACK (tags_cb), self);
+  g_signal_connect (G_OBJECT (bus), "message::tag", G_CALLBACK (tags_cb), self);
 
   g_signal_connect (self->playbin, "video-changed",
       G_CALLBACK (video_changed_cb), self);

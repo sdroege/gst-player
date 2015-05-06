@@ -763,7 +763,7 @@ gst_player_media_info_get_container_format (const GstPlayerMediaInfo * info)
  * Returns: (transfer none): GstSample or NULL.
  */
 GstSample *
-gst_player_media_info_get_image_sample (const GstPlayerMediaInfo *info)
+gst_player_media_info_get_image_sample (const GstPlayerMediaInfo * info)
 {
   g_return_val_if_fail (GST_IS_PLAYER_MEDIA_INFO (info), NULL);
 
