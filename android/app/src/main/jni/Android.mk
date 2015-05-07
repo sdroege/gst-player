@@ -13,11 +13,14 @@ LOCAL_SHARED_LIBRARIES := gstreamer_android
 LOCAL_LDLIBS := -llog -landroid
 include $(BUILD_SHARED_LIBRARY)
 
-ifndef GSTREAMER_ROOT
-ifndef GSTREAMER_ROOT_ANDROID
-$(error GSTREAMER_ROOT_ANDROID is not defined!)
-endif
-GSTREAMER_ROOT        := $(GSTREAMER_ROOT_ANDROID)
+ifeq ($(TARGET_ARCH_ABI),armeabi)
+  GSTREAMER_ROOT := $(GSTREAMER_ROOT_ARM)
+else ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+  GSTREAMER_ROOT := $(GSTREAMER_ROOT_ARMV7)
+else ifeq ($(TARGET_ARCH_ABI),x86)
+  GSTREAMER_ROOT := $(GSTREAMER_ROOT_X86)
+else
+  $(error Target arch ABI $(TARGET_ARCH_ABI) not supported)
 endif
 
 GSTREAMER_NDK_BUILD_PATH  := $(GSTREAMER_ROOT)/share/gst-android/ndk-build/

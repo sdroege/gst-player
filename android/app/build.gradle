@@ -48,7 +48,9 @@ android {
         Properties properties = new Properties()
         properties.load(project.rootProject.file('local.properties').newDataInputStream())
         def ndkDir = properties.getProperty('ndk.dir')
-        environment GSTREAMER_ROOT_ANDROID: properties.getProperty('gstreamer.dir')
+        environment GSTREAMER_ROOT_ARM: properties.getProperty('gstreamer.arm.dir')
+        environment GSTREAMER_ROOT_ARMV7: properties.getProperty('gstreamer.armv7.dir')
+        environment GSTREAMER_ROOT_X86: properties.getProperty('gstreamer.x86.dir')
 
         def ndkExtraPath = properties.getProperty('ndk.extraPath')
         if (! "".equalsIgnoreCase(ndkExtraPath)) {

@@ -22,7 +22,7 @@ ChangeLog
 android/assets
 android/bin
 android/gen
-android/gst-build*
+android/**/gst-build*
 android/libs
 android/obj
 android/local.properties
