@@ -28,7 +28,7 @@ Android Studio builds will work out of the box. Simply open `build.gradle` in th
 Manual NDK build
 ----------------
 
-It is still possible to build the just the NDK portion. This will speed up the process a bit as you don't need to start gradle first and compile the complete App.
+It is still possible to build just the NDK portion. This will speed up the process a bit as you don't need to start gradle first and compile the complete App.
 For this to work, you still need to set the `GSTREAMER_ROOT_ANDROID` and `NDK_PROJECT_PATH` environment variables.
 Also, make sure all the SDK & NDK tools are available in `$PATH`.
 
