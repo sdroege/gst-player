@@ -41,7 +41,6 @@ import android.widget.ListView;
 
 public class VideoSelector extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    private ListView videoList;
     VideoAdapter adapter;
     boolean sortByName = false;
 
@@ -50,7 +49,7 @@ public class VideoSelector extends AppCompatActivity implements LoaderManager.Lo
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_selector);
 
-        videoList = (ListView) findViewById(R.id.videoList);
+        ListView videoList = (ListView) findViewById(R.id.videoList);
         adapter = new VideoAdapter(this);
         videoList.setAdapter(adapter);
         videoList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -137,16 +136,6 @@ public class VideoSelector extends AppCompatActivity implements LoaderManager.Lo
             cursor.moveToPosition(position);
 
             return cursor.getLong(0);
-        }
-
-        public String getVideoTitle(int position) {
-            final Cursor cursor = getCursor();
-            if (cursor.getCount() == 0) {
-                return "";
-            }
-            cursor.moveToPosition(position);
-
-            return cursor.getString(cursor.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME));
         }
 
         public String getVideoPath(int position) {
