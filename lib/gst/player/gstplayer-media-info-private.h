@@ -94,7 +94,11 @@ struct _GstPlayerMediaInfo
   GObject parent;
 
   gchar *uri;
+  gchar *title;
+  gchar *container;
   gboolean seekable;
+  GstTagList *tags;
+  GstSample *image_sample;
 
   GList *stream_list;
   GList *audio_stream_list;

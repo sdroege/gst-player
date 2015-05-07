@@ -8,10 +8,9 @@ LOCAL_MODULE    := gstplayer
 LOCAL_SRC_FILES := player.c  \
     $(GST_PATH)/lib/gst/player/gstplayer.c \
     $(GST_PATH)/lib/gst/player/gstplayer-media-info.c
-
+LOCAL_C_INCLUDES := $(GST_PATH)/lib
 LOCAL_SHARED_LIBRARIES := gstreamer_android
 LOCAL_LDLIBS := -llog -landroid
-LOCAL_CFLAGS := -I$(GST_PATH)/lib/
 include $(BUILD_SHARED_LIBRARY)
 
 ifndef GSTREAMER_ROOT

@@ -25,7 +25,7 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 
-#include "gst/player/player.h"
+#include "gst/player/gstplayer.h"
 
 GST_DEBUG_CATEGORY_STATIC (debug_category);
 #define GST_CAT_DEFAULT debug_category
@@ -40,7 +40,6 @@ typedef struct _Player
   ANativeWindow *native_window;
 } Player;
 
-static pthread_t gst_app_thread;
 static pthread_key_t current_jni_env;
 static JavaVM *java_vm;
 static jfieldID native_player_field_id;
@@ -475,8 +474,17 @@ JNI_OnLoad (JavaVM * vm, void *reserved)
     return 0;
   }
   jclass klass = (*env)->FindClass (env, "org/freedesktop/gstreamer/Player");
-  (*env)->RegisterNatives (env, klass, native_methods,
-      G_N_ELEMENTS (native_methods));
+  if (!klass) {
+    __android_log_print (ANDROID_LOG_ERROR, "GstPlayer",
+        "Could not retrieve class org.freedesktop.gstreamer.Player");
+    return 0;
+  }
+  if ((*env)->RegisterNatives (env, klass, native_methods,
+          G_N_ELEMENTS (native_methods))) {
+    __android_log_print (ANDROID_LOG_ERROR, "GstPlayer",
+        "Could not register native methods for org.freedesktop.gstreamer.Player");
+    return 0;
+  }
 
   pthread_key_create (&current_jni_env, detach_current_thread);
 
