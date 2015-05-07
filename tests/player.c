@@ -331,7 +331,7 @@ test_player_new (TestPlayerState * state)
 static void
 test_audio_info (GstPlayerStreamInfo * stream, gpointer user_data)
 {
-  GstPlayerAudioInfo *audio_info = (GstPlayerAudioInfo*) stream;
+  GstPlayerAudioInfo *audio_info = (GstPlayerAudioInfo *) stream;
 
   fail_unless (gst_player_stream_info_get_tags (stream) != NULL);
   fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
@@ -350,17 +350,15 @@ test_video_info (GstPlayerStreamInfo * stream, gpointer user_data)
 {
   gint fps_d, fps_n;
   guint par_d, par_n;
-  GstPlayerVideoInfo *video_info = (GstPlayerVideoInfo*) stream;
+  GstPlayerVideoInfo *video_info = (GstPlayerVideoInfo *) stream;
 
   fail_unless (gst_player_stream_info_get_tags (stream) != NULL);
   fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
   fail_unless_equals_int (gst_player_stream_info_get_index (stream), 0);
   fail_unless_equals_string (gst_player_stream_info_get_codec (stream),
       "Theora");
-  fail_unless_equals_int (gst_player_video_info_get_width (video_info),
-      320);
-  fail_unless_equals_int (gst_player_video_info_get_height (video_info),
-      240);
+  fail_unless_equals_int (gst_player_video_info_get_width (video_info), 320);
+  fail_unless_equals_int (gst_player_video_info_get_height (video_info), 240);
   gst_player_video_info_get_framerate (video_info, &fps_n, &fps_d);
   fail_unless_equals_int (fps_n, 30);
   fail_unless_equals_int (fps_d, 1);
@@ -386,7 +384,7 @@ test_media_info_object (GstPlayer * player, GstPlayerMediaInfo * media_info,
   num_audio = num_video = unknown = 0;
   for (l = list; l != NULL; l = l->next) {
     const gchar *type;
-    GstPlayerStreamInfo *stream = (GstPlayerStreamInfo*) l->data;
+    GstPlayerStreamInfo *stream = (GstPlayerStreamInfo *) l->data;
 
     type = gst_player_stream_info_get_stream_type (stream);
     if (strcmp (type, "video") == 0) {
