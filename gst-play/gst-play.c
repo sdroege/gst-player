@@ -331,12 +331,12 @@ print_media_info (GstPlayerMediaInfo * media_info)
 static void
 media_info_cb (GstPlayer * player, GstPlayerMediaInfo * info, GstPlay * play)
 {
-  static int once = 0;
+  static int cur_idx = -1;
 
-  if (!once) {
+  if (cur_idx != play->cur_idx) {
     print_media_info (info);
     print_current_tracks (play);
-    once = 1;
+    cur_idx = play->cur_idx;
   }
 }
 
