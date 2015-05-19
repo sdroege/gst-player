@@ -130,6 +130,18 @@ gboolean     gst_player_set_subtitle_uri              (GstPlayer    * player,
                                                        const gchar *uri);
 gchar *      gst_player_get_subtitle_uri              (GstPlayer    * player);
 
+gchar **     gst_player_get_visualization_elements_name (void);
+
+gchar **     gst_player_get_visualization_elements_description (void);
+
+gboolean     gst_player_set_visualization             (GstPlayer    * player,
+                                                       const gchar *name);
+
+void         gst_player_set_visualization_enabled     (GstPlayer    * player,
+                                                       gboolean enabled);
+
+const gchar * gst_player_get_current_visualization    (GstPlayer    * player);
+
 G_END_DECLS
 
 #endif /* __GST_PLAYER_H__ */
