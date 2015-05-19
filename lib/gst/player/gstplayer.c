@@ -69,6 +69,7 @@ enum
   PROP_0,
   PROP_DISPATCH_TO_MAIN_CONTEXT,
   PROP_URI,
+  PROP_SUBURI,
   PROP_POSITION,
   PROP_DURATION,
   PROP_MEDIA_INFO,
@@ -110,6 +111,7 @@ struct _GstPlayer
   GMainContext *application_context;
 
   gchar *uri;
+  gchar *suburi;
 
   GThread *thread;
   GMutex lock;
@@ -230,6 +232,9 @@ gst_player_class_init (GstPlayerClass * klass)
   param_specs[PROP_URI] = g_param_spec_string ("uri", "URI", "Current URI",
       NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
+  param_specs[PROP_SUBURI] = g_param_spec_string ("suburi", "Subtitle URI",
+      "Current Subtitle URI", NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
   param_specs[PROP_POSITION] =
       g_param_spec_uint64 ("position", "Position", "Current Position",
       0, G_MAXUINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
@@ -331,6 +336,8 @@ gst_player_finalize (GObject * object)
   GST_TRACE_OBJECT (self, "Finalizing");
 
   g_free (self->uri);
+  if (self->suburi)
+    g_free (self->suburi);
   if (self->global_tags)
     gst_tag_list_unref (self->global_tags);
   if (self->application_context)
@@ -355,7 +362,44 @@ gst_player_set_uri_internal (gpointer user_data)
 
   g_object_set (self->playbin, "uri", self->uri, NULL);
 
+  /* if have suburi from previous playback then free it */
+  if (self->suburi) {
+    g_free (self->suburi);
+    self->suburi = NULL;
+    g_object_set (self->playbin, "suburi", NULL, NULL);
+  }
+
   g_mutex_unlock (&self->lock);
+
+  return G_SOURCE_REMOVE;
+}
+
+static gboolean
+gst_player_set_suburi_internal (gpointer user_data)
+{
+  GstPlayer *self = user_data;
+  GstClockTime position;
+  GstPlayerState app_state;
+
+  /* save the state and position */
+  position = gst_player_get_position (self);
+  app_state = self->app_state;
+
+  gst_player_stop_internal (self);
+  g_mutex_lock (&self->lock);
+
+  GST_DEBUG_OBJECT (self, "Changing SUBURI to '%s'", GST_STR_NULL (self->suburi));
+
+  g_object_set (self->playbin, "suburi", self->suburi, NULL);
+  g_object_set (self->playbin, "uri", self->uri, NULL);
+
+  g_mutex_unlock (&self->lock);
+
+  /* restore state and  position */
+  if (app_state == GST_PLAYER_STATE_PAUSED)
+    gst_player_pause_internal (self);
+  
+  gst_player_seek (self, position);
 
   return G_SOURCE_REMOVE;
 }
@@ -381,6 +425,18 @@ gst_player_set_property (GObject * object, guint prop_id,
       g_mutex_unlock (&self->lock);
 
       g_main_context_invoke (self->context, gst_player_set_uri_internal, self);
+      break;
+    }
+    case PROP_SUBURI:{
+      g_mutex_lock (&self->lock);
+      if (self->suburi)
+        g_free (self->suburi);
+
+      self->suburi = g_value_dup_string (value);
+      GST_DEBUG_OBJECT (self, "Set suburi=%s", self->suburi);
+      g_mutex_unlock (&self->lock);
+
+      g_main_context_invoke (self->context, gst_player_set_suburi_internal, self);
       break;
     }
     case PROP_VOLUME:
@@ -417,6 +473,13 @@ gst_player_get_property (GObject * object, guint prop_id,
       g_mutex_unlock (&self->lock);
       break;
       GST_TRACE_OBJECT (self, "Returning is-playing=%d",
+          g_value_get_boolean (value));
+      break;
+    case PROP_SUBURI:
+      g_mutex_lock (&self->lock);
+      g_value_set_string (value, self->suburi);
+      g_mutex_unlock (&self->lock);
+      GST_DEBUG_OBJECT (self, "Returning has-suburi=%d",
           g_value_get_boolean (value));
       break;
     case PROP_POSITION:{
@@ -1490,6 +1553,26 @@ gst_player_subtitle_info_update (GstPlayer * self,
         g_free (lang_code);
       }
     }
+
+    /* If we are still failed to find language name then check if external
+     * subtitle is loaded and compare the stream index between current sub
+     * stream index with our stream index and if matches then declare it as
+     * external subtitle and use the filename.
+     */
+    if (!info->language) {
+      gint text_index = -1;
+      gchar * suburi = NULL;
+
+      g_object_get (G_OBJECT (self->playbin), "current-suburi", &suburi, NULL);
+      if (suburi) {
+        g_object_get (G_OBJECT (self->playbin), "current-text", &text_index,
+            NULL);
+        if (text_index == gst_player_stream_info_get_index (stream_info))
+          info->language = g_path_get_basename (suburi);
+        g_free (suburi);
+      }
+    }
+
   } else {
     if (info->language) {
       g_free (info->language);
@@ -2838,6 +2921,50 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
     player_clear_flag (self, GST_PLAY_FLAG_SUBTITLE);
 
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
+}
+
+/*
+ * gst_player_set_subtitle_uri:
+ * @player: #GstPlayer instance
+ * @suburi: subtitle uri
+ *
+ * Set the subtitle uri.
+ */
+gboolean
+gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
+{
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+  g_return_val_if_fail (suburi != NULL, FALSE);
+
+  g_mutex_lock (&self->lock);
+  if (self->suburi)
+    g_free (self->suburi);
+  self->suburi = g_strdup (suburi);
+  g_mutex_unlock (&self->lock);
+
+  gst_player_set_suburi_internal (self);
+
+  return TRUE;
+}
+
+/*
+ * gst_player_get_subtitle_uri:
+ * @player: #GstPlayer instance
+ *
+ * current subtitle uri
+ *
+ * g_free() after usage.
+ */
+gchar *
+gst_player_get_subtitle_uri (GstPlayer * self)
+{
+  gchar *val = NULL;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  g_object_get (self, "suburi", &val, NULL);
+
+  return val;
 }
 
 #define C_ENUM(v) ((gint) v)

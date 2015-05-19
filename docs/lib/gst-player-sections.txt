@@ -52,6 +52,10 @@ gst_player_get_current_subtitle_track
 gst_player_set_audio_track_enabled
 gst_player_set_video_track_enabled
 gst_player_set_subtitle_track_enabled
+
+gst_player_set_subtitle_uri
+gst_player_get_subtitle_uri
+
 <SUBSECTION Standard>
 GST_IS_PLAYER
 GST_IS_PLAYER_CLASS

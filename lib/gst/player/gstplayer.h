@@ -97,22 +97,22 @@ void         gst_player_set_window_handle             (GstPlayer    * player,
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
 
-void          gst_player_set_video_track_enabled      (GstPlayer    * player,
+void         gst_player_set_video_track_enabled       (GstPlayer    * player,
                                                        gboolean enabled);
 
-void          gst_player_set_audio_track_enabled      (GstPlayer    * player,
+void         gst_player_set_audio_track_enabled       (GstPlayer    * player,
                                                        gboolean enabled);
 
-void          gst_player_set_subtitle_track_enabled   (GstPlayer    * player,
+void         gst_player_set_subtitle_track_enabled    (GstPlayer    * player,
                                                        gboolean enabled);
 
-gboolean      gst_player_set_audio_track              (GstPlayer    *player,
+gboolean     gst_player_set_audio_track               (GstPlayer    *player,
                                                        gint stream_index);
 
-gboolean      gst_player_set_video_track              (GstPlayer    *player,
+gboolean     gst_player_set_video_track               (GstPlayer    *player,
                                                        gint stream_index);
 
-gboolean      gst_player_set_subtitle_track           (GstPlayer    *player,
+gboolean     gst_player_set_subtitle_track            (GstPlayer    *player,
                                                        gint stream_index);
 
 GstPlayerMediaInfo * gst_player_get_media_info        (GstPlayer    * player);
@@ -125,6 +125,10 @@ GstPlayerVideoInfo * gst_player_get_current_video_track
 
 GstPlayerSubtitleInfo * gst_player_get_current_subtitle_track
                                                       (GstPlayer    * player);
+
+gboolean     gst_player_set_subtitle_uri              (GstPlayer    * player,
+                                                       const gchar *uri);
+gchar *      gst_player_get_subtitle_uri              (GstPlayer    * player);
 
 G_END_DECLS
 
