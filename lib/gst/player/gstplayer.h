@@ -22,7 +22,8 @@
 #define __GST_PLAYER_H__
 
 #include <gst/gst.h>
-#include <gst/player/gstplayer-media-info.h>
+#include <gst/gl/gstglcontext.h>
+#include "gstplayer-media-info.h"
 
 G_BEGIN_DECLS
 
@@ -94,6 +95,10 @@ void         gst_player_set_mute                      (GstPlayer    * player,
 gpointer     gst_player_get_window_handle             (GstPlayer    * player);
 void         gst_player_set_window_handle             (GstPlayer    * player,
                                                        gpointer       val);
+
+GstGLContext * gst_player_get_share_gl_context        (GstPlayer    * player);
+void           gst_player_set_share_gl_context        (GstPlayer    * player,
+                                                       GstGLContext * context);
 
 GstElement * gst_player_get_pipeline                  (GstPlayer    * player);
 
