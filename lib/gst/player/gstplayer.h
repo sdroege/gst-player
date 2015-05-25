@@ -23,7 +23,7 @@
 
 #include <gst/gst.h>
 #include <gst/gl/gstglcontext.h>
-#include "gstplayer-media-info.h"
+#include <gst/player/gstplayer-media-info.h>
 
 G_BEGIN_DECLS
 
