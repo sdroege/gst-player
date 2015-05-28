@@ -134,8 +134,8 @@ struct _GstPlayer
   GstTagList *global_tags;
   GstPlayerMediaInfo *media_info;
 
-  GstGLContext * other_context;
-  GstElement * gl_elem;
+  GstGLContext *other_context;
+  GstElement *gl_elem;
 
   /* Protected by lock */
   gboolean seek_pending;        /* Only set from main context */
@@ -418,7 +418,7 @@ gst_player_set_property (GObject * object, guint prop_id,
       break;
     case PROP_OTHER_GL_CONTEXT:{
       if (self->other_context)
-        g_object_unref(self->other_context);
+        g_object_unref (self->other_context);
 
       self->other_context = g_value_dup_object (value);
       share_context (self, self->other_context);
@@ -2957,62 +2957,63 @@ on_gst_buffer_dispatch (gpointer user_data)
 }
 
 static void
-on_gst_buffer(GstPlayer * self, GstBuffer * buf,
-    GstPad * pad)
+on_gst_buffer (GstPlayer * self, GstBuffer * buf, GstPad * pad)
 {
-    if (self->dispatch_to_main_context) {
-      NewBufferSignalData *data = g_new (NewBufferSignalData, 1);
+  if (self->dispatch_to_main_context) {
+    NewBufferSignalData *data = g_new (NewBufferSignalData, 1);
 
-      data->player = self;
-      data->buf =  buf;
-      g_main_context_invoke_full (self->application_context,
-          G_PRIORITY_DEFAULT, on_gst_buffer_dispatch, data,
-          (GDestroyNotify) g_free);
-    } else {
-      g_signal_emit (self, signals[SIGNAL_NEW_BUFFER], 0, buf);
-    }
+    data->player = self;
+    data->buf = buf;
+    g_main_context_invoke_full (self->application_context,
+        G_PRIORITY_DEFAULT, on_gst_buffer_dispatch, data,
+        (GDestroyNotify) g_free);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_NEW_BUFFER], 0, buf);
+  }
 }
 
 static void
 share_context (GstPlayer * self, GstGLContext * other_context)
 {
-    GstElement *fakesink, *bin;
-    GstPad *pad, *ghost_pad;
+  GstElement *fakesink, *bin;
+  GstPad *pad, *ghost_pad;
 
-    // FIXME use an glimagesink
-    fakesink = gst_element_factory_make ("fakesink", NULL);
-    g_object_set (G_OBJECT (fakesink), "sync", 1,
-                  "signal-handoffs", TRUE, NULL);
+  // FIXME use an glimagesink
+  fakesink = gst_element_factory_make ("fakesink", NULL);
+  g_object_set (G_OBJECT (fakesink), "sync", TRUE, "signal-handoffs", TRUE,
+      NULL);
 
-    g_signal_connect_swapped(fakesink, "handoff", G_CALLBACK (on_gst_buffer), self);
+  g_signal_connect_swapped (fakesink, "handoff", G_CALLBACK (on_gst_buffer),
+      self);
 
-    self->gl_elem = gst_element_factory_make ("gleffects", NULL);
-    g_object_set (G_OBJECT (self->gl_elem), "effect", 0,
-                  "other-context", other_context, NULL);
+  self->gl_elem = gst_element_factory_make ("gleffects", NULL);
+  g_object_set (G_OBJECT (self->gl_elem), "effect", 0,
+      "other-context", other_context, NULL);
 
-    bin = gst_bin_new ("videosink");
-    gst_bin_add_many (GST_BIN (bin), self->gl_elem, fakesink, NULL);
-    gst_element_link (self->gl_elem, fakesink);
+  bin = gst_bin_new ("videosink");
+  gst_bin_add_many (GST_BIN (bin), self->gl_elem, fakesink, NULL);
+  gst_element_link (self->gl_elem, fakesink);
 
-    pad = gst_element_get_static_pad (self->gl_elem, "sink");
-    ghost_pad = gst_ghost_pad_new ("sink", pad);
-    gst_pad_set_active (ghost_pad, TRUE);
-    gst_element_add_pad (GST_ELEMENT (bin), ghost_pad);
-    gst_object_unref (pad);
+  pad = gst_element_get_static_pad (self->gl_elem, "sink");
+  ghost_pad = gst_ghost_pad_new ("sink", pad);
+  gst_pad_set_active (ghost_pad, TRUE);
+  gst_element_add_pad (GST_ELEMENT (bin), ghost_pad);
+  gst_object_unref (pad);
 
-    g_object_set (G_OBJECT (self->playbin), "video-sink", bin, NULL);
-    gst_object_unref(bin);
+  g_object_set (G_OBJECT (self->playbin), "video-sink", bin, NULL);
+  gst_object_unref (bin);
 }
 
 void
-gst_player_set_share_gl_context (GstPlayer * self, GstGLContext *context)
+gst_player_set_share_gl_context (GstPlayer * self, GstGLContext * context)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
   g_object_set (G_OBJECT (self), "other-context", context, NULL);
 }
 
-GstGLContext *gst_player_get_share_gl_context(GstPlayer * self)
+GstGLContext *
+gst_player_get_share_gl_context (GstPlayer * self)
 {
   gpointer val;
 
@@ -3022,5 +3023,3 @@ GstGLContext *gst_player_get_share_gl_context(GstPlayer * self)
 
   return val;
 }
-
-
