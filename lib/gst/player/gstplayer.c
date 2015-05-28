@@ -49,6 +49,7 @@
 #include <gst/video/video.h>
 #include <gst/tag/tag.h>
 #include <gst/pbutils/descriptions.h>
+#include <gst/gl/gstglcontext.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);
 #define GST_CAT_DEFAULT gst_player_debug
@@ -79,6 +80,7 @@ enum
   PROP_MUTE,
   PROP_WINDOW_HANDLE,
   PROP_PIPELINE,
+  PROP_OTHER_GL_CONTEXT,
   PROP_LAST
 };
 
@@ -92,6 +94,7 @@ enum
   SIGNAL_ERROR,
   SIGNAL_VIDEO_DIMENSIONS_CHANGED,
   SIGNAL_MEDIA_INFO_UPDATED,
+  SIGNAL_NEW_BUFFER,
   SIGNAL_LAST
 };
 
@@ -130,6 +133,9 @@ struct _GstPlayer
 
   GstTagList *global_tags;
   GstPlayerMediaInfo *media_info;
+
+  GstGLContext *other_context;
+  GstElement *gl_elem;
 
   /* Protected by lock */
   gboolean seek_pending;        /* Only set from main context */
@@ -190,6 +196,8 @@ static void *get_container_format (GstTagList * tags);
 static void *get_from_tags (GstPlayer * self, GstPlayerMediaInfo * media_info,
     void *(*func) (GstTagList *));
 static void *get_cover_sample (GstTagList * tags);
+
+static void share_context (GstPlayer * self, GstGLContext * other_context);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -276,6 +284,11 @@ gst_player_class_init (GstPlayerClass * klass)
       "GStreamer pipeline that is used",
       GST_TYPE_ELEMENT, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
+  param_specs[PROP_OTHER_GL_CONTEXT] =
+      g_param_spec_object ("other-context", "Share GL Context",
+      "Share GL textures with another context",
+      GST_GL_TYPE_CONTEXT, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (gobject_class, PROP_LAST, param_specs);
 
   signals[SIGNAL_POSITION_UPDATED] =
@@ -317,6 +330,11 @@ gst_player_class_init (GstPlayerClass * klass)
       g_signal_new ("media-info-updated", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_PLAYER_MEDIA_INFO);
+
+  signals[SIGNAL_NEW_BUFFER] =
+      g_signal_new ("new-buffer", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_BUFFER);
 }
 
 static void
@@ -398,6 +416,14 @@ gst_player_set_property (GObject * object, guint prop_id,
       gst_video_overlay_set_window_handle (GST_VIDEO_OVERLAY (self->playbin),
           self->window_handle);
       break;
+    case PROP_OTHER_GL_CONTEXT:{
+      if (self->other_context)
+        g_object_unref (self->other_context);
+
+      self->other_context = g_value_dup_object (value);
+      share_context (self, self->other_context);
+      break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -480,6 +506,9 @@ gst_player_get_property (GObject * object, guint prop_id,
       break;
     case PROP_PIPELINE:
       g_value_set_object (value, self->playbin);
+      break;
+    case PROP_OTHER_GL_CONTEXT:
+      g_value_set_object (value, self->other_context);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -2909,4 +2938,88 @@ gst_player_error_get_name (GstPlayerError error)
 
   g_assert_not_reached ();
   return NULL;
+}
+
+typedef struct
+{
+  GstPlayer *player;
+  GstBuffer *buf;
+} NewBufferSignalData;
+
+static gboolean
+on_gst_buffer_dispatch (gpointer user_data)
+{
+  NewBufferSignalData *data = user_data;
+
+  g_signal_emit (data->player, signals[SIGNAL_NEW_BUFFER], 0, data->buf);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+on_gst_buffer (GstPlayer * self, GstBuffer * buf, GstPad * pad)
+{
+  if (self->dispatch_to_main_context) {
+    NewBufferSignalData *data = g_new (NewBufferSignalData, 1);
+
+    data->player = self;
+    data->buf = buf;
+    g_main_context_invoke_full (self->application_context,
+        G_PRIORITY_DEFAULT, on_gst_buffer_dispatch, data,
+        (GDestroyNotify) g_free);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_NEW_BUFFER], 0, buf);
+  }
+}
+
+static void
+share_context (GstPlayer * self, GstGLContext * other_context)
+{
+  GstElement *fakesink, *bin;
+  GstPad *pad, *ghost_pad;
+
+  // FIXME use an glimagesink
+  fakesink = gst_element_factory_make ("fakesink", NULL);
+  g_object_set (G_OBJECT (fakesink), "sync", TRUE, "signal-handoffs", TRUE,
+      NULL);
+
+  g_signal_connect_swapped (fakesink, "handoff", G_CALLBACK (on_gst_buffer),
+      self);
+
+  self->gl_elem = gst_element_factory_make ("gleffects", NULL);
+  g_object_set (G_OBJECT (self->gl_elem), "effect", 0,
+      "other-context", other_context, NULL);
+
+  bin = gst_bin_new ("videosink");
+  gst_bin_add_many (GST_BIN (bin), self->gl_elem, fakesink, NULL);
+  gst_element_link (self->gl_elem, fakesink);
+
+  pad = gst_element_get_static_pad (self->gl_elem, "sink");
+  ghost_pad = gst_ghost_pad_new ("sink", pad);
+  gst_pad_set_active (ghost_pad, TRUE);
+  gst_element_add_pad (GST_ELEMENT (bin), ghost_pad);
+  gst_object_unref (pad);
+
+  g_object_set (G_OBJECT (self->playbin), "video-sink", bin, NULL);
+  gst_object_unref (bin);
+}
+
+void
+gst_player_set_share_gl_context (GstPlayer * self, GstGLContext * context)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_object_set (G_OBJECT (self), "other-context", context, NULL);
+}
+
+GstGLContext *
+gst_player_get_share_gl_context (GstPlayer * self)
+{
+  gpointer val;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  g_object_get (G_OBJECT (self), "other-context", &val, NULL);
+
+  return val;
 }
