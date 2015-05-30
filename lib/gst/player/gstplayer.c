@@ -386,10 +386,10 @@ gst_player_set_suburi_internal (gpointer user_data)
 {
   GstPlayer *self = user_data;
   GstClockTime position;
-  GstPlayerState app_state;
+  GstState target_state;
 
   /* save the state and position */
-  app_state = self->app_state;
+  target_state = self->target_state;
   position = gst_player_get_position (self);
 
   gst_player_stop_internal (self);
@@ -406,9 +406,9 @@ gst_player_set_suburi_internal (gpointer user_data)
   /* restore state and position */
   if (position != GST_CLOCK_TIME_NONE)
     gst_player_seek (self, position);
-  if (app_state == GST_PLAYER_STATE_PAUSED)
+  if (target_state == GST_STATE_PAUSED)
     gst_player_pause_internal (self);
-  else if (app_state == GST_PLAYER_STATE_PLAYING)
+  else if (target_state == GST_STATE_PLAYING)
     gst_player_play_internal (self);
 
   return G_SOURCE_REMOVE;
