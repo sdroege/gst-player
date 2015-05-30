@@ -56,11 +56,15 @@ gst_player_set_subtitle_track_enabled
 gst_player_set_subtitle_uri
 gst_player_get_subtitle_uri
 
-gst_player_get_visualization_elements_name
-gst_player_get_visualization_elements_description
-gst_player_get_current_visualization
 gst_player_set_visualization
 gst_player_set_visualization_enabled
+gst_player_get_current_visualization
+
+GstPlayerVisualization
+gst_player_visualizations_get
+gst_player_visualizations_free
+gst_player_visualization_copy
+gst_player_visualization_free
 
 <SUBSECTION Standard>
 GST_IS_PLAYER
@@ -72,6 +76,8 @@ GST_PLAYER_GET_CLASS
 GST_TYPE_PLAYER
 GstPlayerClass
 gst_player_get_type
+
+gst_player_visualization_get_type
 
 GST_TYPE_PLAYER_ERROR
 gst_player_error_quark

@@ -130,17 +130,27 @@ gboolean     gst_player_set_subtitle_uri              (GstPlayer    * player,
                                                        const gchar *uri);
 gchar *      gst_player_get_subtitle_uri              (GstPlayer    * player);
 
-gchar **     gst_player_get_visualization_elements_name (void);
-
-gchar **     gst_player_get_visualization_elements_description (void);
-
 gboolean     gst_player_set_visualization             (GstPlayer    * player,
                                                        const gchar *name);
 
 void         gst_player_set_visualization_enabled     (GstPlayer    * player,
                                                        gboolean enabled);
 
-const gchar * gst_player_get_current_visualization    (GstPlayer    * player);
+gchar *      gst_player_get_current_visualization     (GstPlayer    * player);
+
+typedef struct _GstPlayerVisualization GstPlayerVisualization;
+struct _GstPlayerVisualization {
+  gchar *name;
+  gchar *description;
+};
+
+GType                     gst_player_visualization_get_type (void);
+
+GstPlayerVisualization *  gst_player_visualization_copy  (const GstPlayerVisualization *vis);
+void                      gst_player_visualization_free  (GstPlayerVisualization *vis);
+
+GstPlayerVisualization ** gst_player_visualizations_get  (void);
+void                      gst_player_visualizations_free (GstPlayerVisualization **viss);
 
 G_END_DECLS
 

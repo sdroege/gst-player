@@ -150,18 +150,9 @@ struct _GstPlayerClass
   GstObjectClass parent_class;
 };
 
-/* audio visualization elements */
-struct _GstPlayerVisElement
-{
-  gchar *name;
-  gchar *description;
-};
-
-typedef struct _GstPlayerVisElement GstPlayerVisElement;
-
-static GList *vis_list;
+static GMutex vis_lock;
+static GQueue vis_list = G_QUEUE_INIT;
 static guint32 vis_cookie;
-
 
 #define parent_class gst_player_parent_class
 G_DEFINE_TYPE (GstPlayer, gst_player, GST_TYPE_OBJECT);
@@ -210,7 +201,6 @@ static void *get_container_format (GstTagList * tags);
 static void *get_from_tags (GstPlayer * self, GstPlayerMediaInfo * media_info,
     void *(*func) (GstTagList *));
 static void *get_cover_sample (GstTagList * tags);
-static void vis_list_free (GstPlayerVisElement * data);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -361,9 +351,7 @@ gst_player_finalize (GObject * object)
   if (self->application_context)
     g_main_context_unref (self->application_context);
   if (self->current_vis_element)
-    g_object_unref (self->current_vis_element);
-  if (vis_list)
-    g_list_free_full (vis_list, (GDestroyNotify) vis_list_free);
+    gst_object_unref (self->current_vis_element);
   g_mutex_clear (&self->lock);
   g_cond_clear (&self->cond);
 
@@ -2992,118 +2980,129 @@ gst_player_get_subtitle_uri (GstPlayer * self)
   return val;
 }
 
-static void
-vis_list_free (GstPlayerVisElement * data)
+G_DEFINE_BOXED_TYPE (GstPlayerVisualization, gst_player_visualization,
+    (GBoxedCopyFunc) gst_player_visualization_copy,
+    (GBoxedFreeFunc) gst_player_visualization_free);
+
+void
+gst_player_visualization_free (GstPlayerVisualization * vis)
 {
-  g_free (data->name);
-  g_free (data->description);
+  g_return_if_fail (vis != NULL);
+
+  g_free (vis->name);
+  g_free (vis->description);
+  g_free (vis);
 }
 
-static GList *
-gst_player_get_visualization_list (void)
+GstPlayerVisualization *
+gst_player_visualization_copy (const GstPlayerVisualization * vis)
 {
-  GList *list;
+  GstPlayerVisualization *ret;
+
+  g_return_val_if_fail (vis != NULL, NULL);
+
+  ret = g_new0 (GstPlayerVisualization, 1);
+  ret->name = vis->name ? g_strdup (vis->name) : NULL;
+  ret->description = vis->description ? g_strdup (vis->description) : NULL;
+
+  return ret;
+}
+
+void
+gst_player_visualizations_free (GstPlayerVisualization ** viss)
+{
+  GstPlayerVisualization **p;
+
+  g_return_if_fail (viss != NULL);
+
+  p = viss;
+  while (*p) {
+    g_free ((*p)->name);
+    g_free ((*p)->description);
+    g_free (*p);
+    p++;
+  }
+  g_free (viss);
+}
+
+static void
+gst_player_update_visualization_list (void)
+{
   GList *features;
+  GList *l;
   guint32 cookie;
+  GstPlayerVisualization *vis;
+
+  g_mutex_lock (&vis_lock);
 
   /* check if we need to update the list */
   cookie = gst_registry_get_feature_list_cookie (gst_registry_get ());
-  if (vis_cookie == cookie)
-    return vis_list;
+  if (vis_cookie == cookie) {
+    g_mutex_unlock (&vis_lock);
+    return;
+  }
 
   /* if update is needed then first free the existing list */
-  g_list_free_full (vis_list, (GDestroyNotify) vis_list_free);
-  vis_list = NULL;
+  while ((vis = g_queue_pop_head (&vis_list)))
+    gst_player_visualization_free (vis);
 
   features = gst_registry_get_feature_list (gst_registry_get (),
       GST_TYPE_ELEMENT_FACTORY);
 
-  for (list = features; list != NULL; list = list->next) {
-    GstPluginFeature *feature;
-    GstElementFactory *factory;
+  for (l = features; l; l = l->next) {
+    GstPluginFeature *feature = l->data;
     const gchar *klass;
 
-    feature = GST_PLUGIN_FEATURE (list->data);
-    factory = gst_element_factory_find (gst_plugin_feature_get_name (feature));
-    klass = gst_element_factory_get_metadata (factory,
+    klass = gst_element_factory_get_metadata (GST_ELEMENT_FACTORY (feature),
         GST_ELEMENT_METADATA_KLASS);
 
     if (strstr (klass, "Visualization")) {
-      GstPlayerVisElement *new = g_new0 (GstPlayerVisElement, 1);
+      vis = g_new0 (GstPlayerVisualization, 1);
 
-      new->name = g_strdup (gst_plugin_feature_get_name (feature));
-      new->description = g_strdup (gst_element_factory_get_metadata (factory,
-              GST_ELEMENT_METADATA_DESCRIPTION));
-      vis_list = g_list_append (vis_list, new);
+      vis->name = g_strdup (gst_plugin_feature_get_name (feature));
+      vis->description =
+          g_strdup (gst_element_factory_get_metadata (GST_ELEMENT_FACTORY
+              (feature), GST_ELEMENT_METADATA_DESCRIPTION));
+      g_queue_push_tail (&vis_list, vis);
     }
-
-    gst_object_unref (factory);
   }
+  gst_plugin_feature_list_free (features);
 
   vis_cookie = cookie;
-  return vis_list;
+
+  g_mutex_unlock (&vis_lock);
 }
 
 /*
- * gst_player_get_visualization_elements_name:
+ * gst_player_visualizations_get:
  *
- * Returns: (transfer full): a NULL terminated string contains all visualization
- * elements name.
+ * Returns: (transfer full) (array zero-terminated=1) (element-type GstPlayerVisualization*): a
+ *   NULL terminated array containing all available visualizations. Use
+ *   gst_player_visualizations_free() after usage.
  *
- * g_free () after usage.
  */
-gchar **
-gst_player_get_visualization_elements_name (void)
+GstPlayerVisualization **
+gst_player_visualizations_get (void)
 {
-  GList *list, *l;
-  gchar **result = NULL;
   gint i = 0;
+  GList *l;
+  GstPlayerVisualization **ret;
 
-  list = gst_player_get_visualization_list ();
-  if (g_list_length (list) > 0) {
-    result = g_malloc0 (sizeof (gchar *) * (g_list_length (list) + 1));
+  gst_player_update_visualization_list ();
 
-    for (l = list; l != NULL; l = l->next) {
-      GstPlayerVisElement *vis = (GstPlayerVisElement *) l->data;
-      result[i++] = vis->name;
-    }
-  }
+  g_mutex_lock (&vis_lock);
+  ret = g_new0 (GstPlayerVisualization *, g_queue_get_length (&vis_list) + 1);
+  for (l = vis_list.head; l; l = l->next)
+    ret[i++] = gst_player_visualization_copy (l->data);
+  g_mutex_unlock (&vis_lock);
 
-  return result;
-}
-
-/*
- * gst_player_get_visualization_elements_description:
- *
- * Returns: (transfer full): a NULL terminated string contains all visualization
- * elements description.
- *
- * g_free () after usage.
- */
-gchar **
-gst_player_get_visualization_elements_description (void)
-{
-  GList *list, *l;
-  gchar **result = NULL;
-  gint i = 0;
-
-  list = gst_player_get_visualization_list ();
-  if (g_list_length (list) > 0) {
-    result = g_malloc0 (sizeof (gchar *) * (g_list_length (list) + 1));
-
-    for (l = list; l != NULL; l = l->next) {
-      GstPlayerVisElement *vis = (GstPlayerVisElement *) l->data;
-      result[i++] = vis->description;
-    }
-  }
-
-  return result;
+  return ret;
 }
 
 /*
  * gst_player_set_visualization:
  * @player: #GstPlayer instance.
- * @name: visualization element obtained from #gst_player_get_visualization_list()
+ * @name: visualization element obtained from #gst_player_visualizations_get()
  *
  */
 gboolean
@@ -3113,12 +3112,14 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
 
   g_mutex_lock (&self->lock);
   if (self->current_vis_element) {
-    g_object_unref (self->current_vis_element);
+    gst_object_unref (self->current_vis_element);
     self->current_vis_element = NULL;
   }
 
-  if (name)
+  if (name) {
     self->current_vis_element = gst_element_factory_make (name, NULL);
+    gst_object_ref_sink (self->current_vis_element);
+  }
   g_object_set (self->playbin, "vis-plugin", self->current_vis_element, NULL);
 
   g_mutex_unlock (&self->lock);
@@ -3130,29 +3131,31 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
 /*
  * gst_player_get_current_visualization:
  * @player: #GstPlayer instance.
- * 
- * g_free() after usage.
+ *
+ * Returns: (transfer full): Name of the currently enabled visualization.
+ *   g_free() after usage.
  */
-const gchar *
+gchar *
 gst_player_get_current_visualization (GstPlayer * self)
 {
-  const gchar *name = NULL;
-  GstElement *vis_elm = NULL;
+  gchar *name = NULL;
+  GstElement *vis_plugin = NULL;
 
-  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
 
   if (!is_track_enabled (self, GST_PLAY_FLAG_VIS))
     return NULL;
 
-  g_object_get (self->playbin, "vis-plugin", &vis_elm, NULL);
+  g_object_get (self->playbin, "vis-plugin", &vis_plugin, NULL);
 
-  if (vis_elm) {
-    GstElementFactory *factory;
-    factory = gst_element_get_factory (vis_elm);
-    name = gst_plugin_feature_get_name (factory);
+  if (vis_plugin) {
+    GstElementFactory *factory = gst_element_get_factory (vis_plugin);
+    if (factory)
+      name = g_strdup (gst_plugin_feature_get_name (factory));
+    gst_object_unref (vis_plugin);
   }
 
-  GST_DEBUG_OBJECT (self, "vis-plugin '%s' %p", name, vis_elm);
+  GST_DEBUG_OBJECT (self, "vis-plugin '%s' %p", name, vis_plugin);
 
   return name;
 }
@@ -3168,7 +3171,6 @@ void
 gst_player_set_visualization_enabled (GstPlayer * self, gboolean enabled)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
-
 
   if (enabled)
     player_set_flag (self, GST_PLAY_FLAG_VIS);
