@@ -403,8 +403,8 @@ gst_player_set_suburi_internal (gpointer user_data)
   GstPlayerState app_state;
 
   /* save the state and position */
-  position = gst_player_get_position (self);
   app_state = self->app_state;
+  position = gst_player_get_position (self);
 
   gst_player_stop_internal (self);
   g_mutex_lock (&self->lock);
@@ -417,11 +417,13 @@ gst_player_set_suburi_internal (gpointer user_data)
 
   g_mutex_unlock (&self->lock);
 
-  /* restore state and  position */
+  /* restore state and position */
+  if (position != GST_CLOCK_TIME_NONE)
+    gst_player_seek (self, position);
   if (app_state == GST_PLAYER_STATE_PAUSED)
     gst_player_pause_internal (self);
-
-  gst_player_seek (self, position);
+  else if (app_state == GST_PLAYER_STATE_PLAYING)
+    gst_player_play_internal (self);
 
   return G_SOURCE_REMOVE;
 }
