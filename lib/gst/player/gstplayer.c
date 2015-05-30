@@ -151,7 +151,8 @@ struct _GstPlayerClass
 };
 
 /* audio visualization elements */
-struct _GstPlayerVisElement {
+struct _GstPlayerVisElement
+{
   gchar *name;
   gchar *description;
 };
@@ -209,7 +210,7 @@ static void *get_container_format (GstTagList * tags);
 static void *get_from_tags (GstPlayer * self, GstPlayerMediaInfo * media_info,
     void *(*func) (GstTagList *));
 static void *get_cover_sample (GstTagList * tags);
-static void vis_list_free (GstPlayerVisElement *data);
+static void vis_list_free (GstPlayerVisElement * data);
 
 static void
 gst_player_init (GstPlayer * self)
@@ -408,7 +409,8 @@ gst_player_set_suburi_internal (gpointer user_data)
   gst_player_stop_internal (self);
   g_mutex_lock (&self->lock);
 
-  GST_DEBUG_OBJECT (self, "Changing SUBURI to '%s'", GST_STR_NULL (self->suburi));
+  GST_DEBUG_OBJECT (self, "Changing SUBURI to '%s'",
+      GST_STR_NULL (self->suburi));
 
   g_object_set (self->playbin, "suburi", self->suburi, NULL);
   g_object_set (self->playbin, "uri", self->uri, NULL);
@@ -418,7 +420,7 @@ gst_player_set_suburi_internal (gpointer user_data)
   /* restore state and  position */
   if (app_state == GST_PLAYER_STATE_PAUSED)
     gst_player_pause_internal (self);
-  
+
   gst_player_seek (self, position);
 
   return G_SOURCE_REMOVE;
@@ -456,7 +458,8 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set suburi=%s", self->suburi);
       g_mutex_unlock (&self->lock);
 
-      g_main_context_invoke (self->context, gst_player_set_suburi_internal, self);
+      g_main_context_invoke (self->context, gst_player_set_suburi_internal,
+          self);
       break;
     }
     case PROP_VOLUME:
@@ -1581,7 +1584,7 @@ gst_player_subtitle_info_update (GstPlayer * self,
      */
     if (!info->language) {
       gint text_index = -1;
-      gchar * suburi = NULL;
+      gchar *suburi = NULL;
 
       g_object_get (G_OBJECT (self->playbin), "current-suburi", &suburi, NULL);
       if (suburi) {
@@ -2988,7 +2991,7 @@ gst_player_get_subtitle_uri (GstPlayer * self)
 }
 
 static void
-vis_list_free (GstPlayerVisElement *data)
+vis_list_free (GstPlayerVisElement * data)
 {
   g_free (data->name);
   g_free (data->description);
@@ -3019,8 +3022,7 @@ gst_player_get_visualization_list (void)
     const gchar *klass;
 
     feature = GST_PLUGIN_FEATURE (list->data);
-    factory = gst_element_factory_find
-                (gst_plugin_feature_get_name (feature));
+    factory = gst_element_factory_find (gst_plugin_feature_get_name (feature));
     klass = gst_element_factory_get_metadata (factory,
         GST_ELEMENT_METADATA_KLASS);
 
@@ -3029,7 +3031,7 @@ gst_player_get_visualization_list (void)
 
       new->name = g_strdup (gst_plugin_feature_get_name (feature));
       new->description = g_strdup (gst_element_factory_get_metadata (factory,
-          GST_ELEMENT_METADATA_DESCRIPTION));
+              GST_ELEMENT_METADATA_DESCRIPTION));
       vis_list = g_list_append (vis_list, new);
     }
 
@@ -3057,10 +3059,10 @@ gst_player_get_visualization_elements_name (void)
 
   list = gst_player_get_visualization_list ();
   if (g_list_length (list) > 0) {
-    result = g_malloc0 (sizeof(gchar*) * (g_list_length (list) + 1));
+    result = g_malloc0 (sizeof (gchar *) * (g_list_length (list) + 1));
 
     for (l = list; l != NULL; l = l->next) {
-      GstPlayerVisElement *vis = (GstPlayerVisElement *)l->data;
+      GstPlayerVisElement *vis = (GstPlayerVisElement *) l->data;
       result[i++] = vis->name;
     }
   }
@@ -3085,10 +3087,10 @@ gst_player_get_visualization_elements_description (void)
 
   list = gst_player_get_visualization_list ();
   if (g_list_length (list) > 0) {
-    result = g_malloc0 (sizeof(gchar*) * (g_list_length (list) + 1));
+    result = g_malloc0 (sizeof (gchar *) * (g_list_length (list) + 1));
 
     for (l = list; l != NULL; l = l->next) {
-      GstPlayerVisElement *vis = (GstPlayerVisElement *)l->data;
+      GstPlayerVisElement *vis = (GstPlayerVisElement *) l->data;
       result[i++] = vis->description;
     }
   }
@@ -3113,7 +3115,7 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
     self->current_vis_element = NULL;
   }
 
-  if (name) 
+  if (name)
     self->current_vis_element = gst_element_factory_make (name, NULL);
   g_object_set (self->playbin, "vis-plugin", self->current_vis_element, NULL);
 
@@ -3144,7 +3146,7 @@ gst_player_get_current_visualization (GstPlayer * self)
 
   if (vis_elm) {
     GstElementFactory *factory;
-    factory = gst_element_get_factory  (vis_elm);
+    factory = gst_element_get_factory (vis_elm);
     name = gst_plugin_feature_get_name (factory);
   }
 
