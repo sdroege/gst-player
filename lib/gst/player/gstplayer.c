@@ -27,8 +27,6 @@
 
 /* TODO:
  *
- * - external subtitles
- * - Visualization
  * - Playback rate
  * - volume/mute change notification
  * - Equalizer
