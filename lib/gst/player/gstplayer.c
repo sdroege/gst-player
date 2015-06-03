@@ -27,8 +27,6 @@
 
 /* TODO:
  *
- * - external subtitles
- * - Visualization
  * - Playback rate
  * - volume/mute change notification
  * - Equalizer
@@ -50,6 +48,8 @@
 #include <gst/tag/tag.h>
 #include <gst/pbutils/descriptions.h>
 
+#include <string.h>
+
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);
 #define GST_CAT_DEFAULT gst_player_debug
 
@@ -69,6 +69,7 @@ enum
   PROP_0,
   PROP_DISPATCH_TO_MAIN_CONTEXT,
   PROP_URI,
+  PROP_SUBURI,
   PROP_POSITION,
   PROP_DURATION,
   PROP_MEDIA_INFO,
@@ -99,7 +100,8 @@ enum
 {
   GST_PLAY_FLAG_VIDEO = (1 << 0),
   GST_PLAY_FLAG_AUDIO = (1 << 1),
-  GST_PLAY_FLAG_SUBTITLE = (1 << 2)
+  GST_PLAY_FLAG_SUBTITLE = (1 << 2),
+  GST_PLAY_FLAG_VIS = (1 << 3)
 };
 
 struct _GstPlayer
@@ -110,6 +112,7 @@ struct _GstPlayer
   GMainContext *application_context;
 
   gchar *uri;
+  gchar *suburi;
 
   GThread *thread;
   GMutex lock;
@@ -131,6 +134,8 @@ struct _GstPlayer
   GstTagList *global_tags;
   GstPlayerMediaInfo *media_info;
 
+  GstElement *current_vis_element;
+
   /* Protected by lock */
   gboolean seek_pending;        /* Only set from main context */
   GstClockTime last_seek_time;  /* Only set from main context */
@@ -142,6 +147,10 @@ struct _GstPlayerClass
 {
   GstObjectClass parent_class;
 };
+
+static GMutex vis_lock;
+static GQueue vis_list = G_QUEUE_INIT;
+static guint32 vis_cookie;
 
 #define parent_class gst_player_parent_class
 G_DEFINE_TYPE (GstPlayer, gst_player, GST_TYPE_OBJECT);
@@ -204,7 +213,6 @@ gst_player_init (GstPlayer * self)
   self->seek_pending = FALSE;
   self->seek_position = GST_CLOCK_TIME_NONE;
   self->last_seek_time = GST_CLOCK_TIME_NONE;
-
   g_mutex_lock (&self->lock);
   self->thread = g_thread_new ("GstPlayer", gst_player_main, self);
   while (!self->loop || !g_main_loop_is_running (self->loop))
@@ -229,6 +237,9 @@ gst_player_class_init (GstPlayerClass * klass)
 
   param_specs[PROP_URI] = g_param_spec_string ("uri", "URI", "Current URI",
       NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_SUBURI] = g_param_spec_string ("suburi", "Subtitle URI",
+      "Current Subtitle URI", NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_POSITION] =
       g_param_spec_uint64 ("position", "Position", "Current Position",
@@ -331,11 +342,14 @@ gst_player_finalize (GObject * object)
   GST_TRACE_OBJECT (self, "Finalizing");
 
   g_free (self->uri);
+  if (self->suburi)
+    g_free (self->suburi);
   if (self->global_tags)
     gst_tag_list_unref (self->global_tags);
   if (self->application_context)
     g_main_context_unref (self->application_context);
-
+  if (self->current_vis_element)
+    gst_object_unref (self->current_vis_element);
   g_mutex_clear (&self->lock);
   g_cond_clear (&self->cond);
 
@@ -355,7 +369,47 @@ gst_player_set_uri_internal (gpointer user_data)
 
   g_object_set (self->playbin, "uri", self->uri, NULL);
 
+  /* if have suburi from previous playback then free it */
+  if (self->suburi) {
+    g_free (self->suburi);
+    self->suburi = NULL;
+    g_object_set (self->playbin, "suburi", NULL, NULL);
+  }
+
   g_mutex_unlock (&self->lock);
+
+  return G_SOURCE_REMOVE;
+}
+
+static gboolean
+gst_player_set_suburi_internal (gpointer user_data)
+{
+  GstPlayer *self = user_data;
+  GstClockTime position;
+  GstState target_state;
+
+  /* save the state and position */
+  target_state = self->target_state;
+  position = gst_player_get_position (self);
+
+  gst_player_stop_internal (self);
+  g_mutex_lock (&self->lock);
+
+  GST_DEBUG_OBJECT (self, "Changing SUBURI to '%s'",
+      GST_STR_NULL (self->suburi));
+
+  g_object_set (self->playbin, "suburi", self->suburi, NULL);
+  g_object_set (self->playbin, "uri", self->uri, NULL);
+
+  g_mutex_unlock (&self->lock);
+
+  /* restore state and position */
+  if (position != GST_CLOCK_TIME_NONE)
+    gst_player_seek (self, position);
+  if (target_state == GST_STATE_PAUSED)
+    gst_player_pause_internal (self);
+  else if (target_state == GST_STATE_PLAYING)
+    gst_player_play_internal (self);
 
   return G_SOURCE_REMOVE;
 }
@@ -381,6 +435,19 @@ gst_player_set_property (GObject * object, guint prop_id,
       g_mutex_unlock (&self->lock);
 
       g_main_context_invoke (self->context, gst_player_set_uri_internal, self);
+      break;
+    }
+    case PROP_SUBURI:{
+      g_mutex_lock (&self->lock);
+      if (self->suburi)
+        g_free (self->suburi);
+
+      self->suburi = g_value_dup_string (value);
+      GST_DEBUG_OBJECT (self, "Set suburi=%s", self->suburi);
+      g_mutex_unlock (&self->lock);
+
+      g_main_context_invoke (self->context, gst_player_set_suburi_internal,
+          self);
       break;
     }
     case PROP_VOLUME:
@@ -417,6 +484,13 @@ gst_player_get_property (GObject * object, guint prop_id,
       g_mutex_unlock (&self->lock);
       break;
       GST_TRACE_OBJECT (self, "Returning is-playing=%d",
+          g_value_get_boolean (value));
+      break;
+    case PROP_SUBURI:
+      g_mutex_lock (&self->lock);
+      g_value_set_string (value, self->suburi);
+      g_mutex_unlock (&self->lock);
+      GST_DEBUG_OBJECT (self, "Returning has-suburi=%d",
           g_value_get_boolean (value));
       break;
     case PROP_POSITION:{
@@ -1490,6 +1564,26 @@ gst_player_subtitle_info_update (GstPlayer * self,
         g_free (lang_code);
       }
     }
+
+    /* If we are still failed to find language name then check if external
+     * subtitle is loaded and compare the stream index between current sub
+     * stream index with our stream index and if matches then declare it as
+     * external subtitle and use the filename.
+     */
+    if (!info->language) {
+      gint text_index = -1;
+      gchar *suburi = NULL;
+
+      g_object_get (G_OBJECT (self->playbin), "current-suburi", &suburi, NULL);
+      if (suburi) {
+        g_object_get (G_OBJECT (self->playbin), "current-text", &text_index,
+            NULL);
+        if (text_index == gst_player_stream_info_get_index (stream_info))
+          info->language = g_path_get_basename (suburi);
+        g_free (suburi);
+      }
+    }
+
   } else {
     if (info->language) {
       g_free (info->language);
@@ -2838,6 +2932,251 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
     player_clear_flag (self, GST_PLAY_FLAG_SUBTITLE);
 
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
+}
+
+/*
+ * gst_player_set_subtitle_uri:
+ * @player: #GstPlayer instance
+ * @suburi: subtitle uri
+ *
+ * Set the subtitle uri.
+ */
+gboolean
+gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
+{
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+  g_return_val_if_fail (suburi != NULL, FALSE);
+
+  g_mutex_lock (&self->lock);
+  if (self->suburi)
+    g_free (self->suburi);
+  self->suburi = g_strdup (suburi);
+  g_mutex_unlock (&self->lock);
+
+  gst_player_set_suburi_internal (self);
+
+  return TRUE;
+}
+
+/*
+ * gst_player_get_subtitle_uri:
+ * @player: #GstPlayer instance
+ *
+ * current subtitle uri
+ *
+ * g_free() after usage.
+ */
+gchar *
+gst_player_get_subtitle_uri (GstPlayer * self)
+{
+  gchar *val = NULL;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  g_object_get (self, "suburi", &val, NULL);
+
+  return val;
+}
+
+G_DEFINE_BOXED_TYPE (GstPlayerVisualization, gst_player_visualization,
+    (GBoxedCopyFunc) gst_player_visualization_copy,
+    (GBoxedFreeFunc) gst_player_visualization_free);
+
+void
+gst_player_visualization_free (GstPlayerVisualization * vis)
+{
+  g_return_if_fail (vis != NULL);
+
+  g_free (vis->name);
+  g_free (vis->description);
+  g_free (vis);
+}
+
+GstPlayerVisualization *
+gst_player_visualization_copy (const GstPlayerVisualization * vis)
+{
+  GstPlayerVisualization *ret;
+
+  g_return_val_if_fail (vis != NULL, NULL);
+
+  ret = g_new0 (GstPlayerVisualization, 1);
+  ret->name = vis->name ? g_strdup (vis->name) : NULL;
+  ret->description = vis->description ? g_strdup (vis->description) : NULL;
+
+  return ret;
+}
+
+void
+gst_player_visualizations_free (GstPlayerVisualization ** viss)
+{
+  GstPlayerVisualization **p;
+
+  g_return_if_fail (viss != NULL);
+
+  p = viss;
+  while (*p) {
+    g_free ((*p)->name);
+    g_free ((*p)->description);
+    g_free (*p);
+    p++;
+  }
+  g_free (viss);
+}
+
+static void
+gst_player_update_visualization_list (void)
+{
+  GList *features;
+  GList *l;
+  guint32 cookie;
+  GstPlayerVisualization *vis;
+
+  g_mutex_lock (&vis_lock);
+
+  /* check if we need to update the list */
+  cookie = gst_registry_get_feature_list_cookie (gst_registry_get ());
+  if (vis_cookie == cookie) {
+    g_mutex_unlock (&vis_lock);
+    return;
+  }
+
+  /* if update is needed then first free the existing list */
+  while ((vis = g_queue_pop_head (&vis_list)))
+    gst_player_visualization_free (vis);
+
+  features = gst_registry_get_feature_list (gst_registry_get (),
+      GST_TYPE_ELEMENT_FACTORY);
+
+  for (l = features; l; l = l->next) {
+    GstPluginFeature *feature = l->data;
+    const gchar *klass;
+
+    klass = gst_element_factory_get_metadata (GST_ELEMENT_FACTORY (feature),
+        GST_ELEMENT_METADATA_KLASS);
+
+    if (strstr (klass, "Visualization")) {
+      vis = g_new0 (GstPlayerVisualization, 1);
+
+      vis->name = g_strdup (gst_plugin_feature_get_name (feature));
+      vis->description =
+          g_strdup (gst_element_factory_get_metadata (GST_ELEMENT_FACTORY
+              (feature), GST_ELEMENT_METADATA_DESCRIPTION));
+      g_queue_push_tail (&vis_list, vis);
+    }
+  }
+  gst_plugin_feature_list_free (features);
+
+  vis_cookie = cookie;
+
+  g_mutex_unlock (&vis_lock);
+}
+
+/*
+ * gst_player_visualizations_get:
+ *
+ * Returns: (transfer full) (array zero-terminated=1) (element-type GstPlayerVisualization*): a
+ *   NULL terminated array containing all available visualizations. Use
+ *   gst_player_visualizations_free() after usage.
+ *
+ */
+GstPlayerVisualization **
+gst_player_visualizations_get (void)
+{
+  gint i = 0;
+  GList *l;
+  GstPlayerVisualization **ret;
+
+  gst_player_update_visualization_list ();
+
+  g_mutex_lock (&vis_lock);
+  ret = g_new0 (GstPlayerVisualization *, g_queue_get_length (&vis_list) + 1);
+  for (l = vis_list.head; l; l = l->next)
+    ret[i++] = gst_player_visualization_copy (l->data);
+  g_mutex_unlock (&vis_lock);
+
+  return ret;
+}
+
+/*
+ * gst_player_set_visualization:
+ * @player: #GstPlayer instance.
+ * @name: visualization element obtained from #gst_player_visualizations_get()
+ *
+ */
+gboolean
+gst_player_set_visualization (GstPlayer * self, const gchar * name)
+{
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  g_mutex_lock (&self->lock);
+  if (self->current_vis_element) {
+    gst_object_unref (self->current_vis_element);
+    self->current_vis_element = NULL;
+  }
+
+  if (name) {
+    self->current_vis_element = gst_element_factory_make (name, NULL);
+    gst_object_ref_sink (self->current_vis_element);
+  }
+  g_object_set (self->playbin, "vis-plugin", self->current_vis_element, NULL);
+
+  g_mutex_unlock (&self->lock);
+  GST_DEBUG_OBJECT (self, "set vis-plugin to '%s'", name);
+
+  return TRUE;
+}
+
+/*
+ * gst_player_get_current_visualization:
+ * @player: #GstPlayer instance.
+ *
+ * Returns: (transfer full): Name of the currently enabled visualization.
+ *   g_free() after usage.
+ */
+gchar *
+gst_player_get_current_visualization (GstPlayer * self)
+{
+  gchar *name = NULL;
+  GstElement *vis_plugin = NULL;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+
+  if (!is_track_enabled (self, GST_PLAY_FLAG_VIS))
+    return NULL;
+
+  g_object_get (self->playbin, "vis-plugin", &vis_plugin, NULL);
+
+  if (vis_plugin) {
+    GstElementFactory *factory = gst_element_get_factory (vis_plugin);
+    if (factory)
+      name = g_strdup (gst_plugin_feature_get_name (factory));
+    gst_object_unref (vis_plugin);
+  }
+
+  GST_DEBUG_OBJECT (self, "vis-plugin '%s' %p", name, vis_plugin);
+
+  return name;
+}
+
+/*
+ * gst_player_set_visualization_enabled:
+ * @player: #GstPlayer instance
+ * @enabled: TRUE or FALSE
+ *
+ * Enable or disable the visualization.
+ */
+void
+gst_player_set_visualization_enabled (GstPlayer * self, gboolean enabled)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  if (enabled)
+    player_set_flag (self, GST_PLAY_FLAG_VIS);
+  else
+    player_clear_flag (self, GST_PLAY_FLAG_VIS);
+
+  GST_DEBUG_OBJECT (self, "visualization is '%s'",
+      enabled ? "Enabled" : "Disabled");
 }
 
 #define C_ENUM(v) ((gint) v)
