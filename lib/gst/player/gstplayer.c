@@ -93,6 +93,8 @@ enum
   SIGNAL_ERROR,
   SIGNAL_VIDEO_DIMENSIONS_CHANGED,
   SIGNAL_MEDIA_INFO_UPDATED,
+  SIGNAL_VOLUME_CHANGED,
+  SIGNAL_MUTE_CHANGED,
   SIGNAL_LAST
 };
 
@@ -328,6 +330,16 @@ gst_player_class_init (GstPlayerClass * klass)
       g_signal_new ("media-info-updated", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_PLAYER_MEDIA_INFO);
+
+  signals[SIGNAL_VOLUME_CHANGED] =
+      g_signal_new ("volume-changed", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 0, G_TYPE_INVALID);
+
+  signals[SIGNAL_MUTE_CHANGED] =
+      g_signal_new ("mute-changed", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 0, G_TYPE_INVALID);
 }
 
 static void
@@ -1106,6 +1118,46 @@ notify_caps_cb (GObject * object, GParamSpec * pspec, gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
 
   check_video_dimensions_changed (self);
+}
+
+static gboolean
+mute_changed_dispatch (gpointer user_data)
+{
+  g_signal_emit (user_data, signals[SIGNAL_MUTE_CHANGED], 0);
+
+  return G_SOURCE_REMOVE;
+}
+
+static inline void
+emit_mute_changed (GstPlayer *self)
+{
+  if (self->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_MUTE_CHANGED], 0, NULL, NULL, NULL) != 0) {
+    g_main_context_invoke (self->application_context, mute_changed_dispatch, self);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_MUTE_CHANGED], 0);
+  }
+}
+
+static gboolean
+volume_changed_dispatch (gpointer user_data)
+{
+  g_signal_emit (user_data, signals[SIGNAL_VOLUME_CHANGED], 0);
+
+  return G_SOURCE_REMOVE;
+}
+
+static inline void
+emit_volume_changed (GstPlayer *self)
+{
+  if (self->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_VOLUME_CHANGED], 0, NULL, NULL, NULL) != 0) {
+    g_main_context_invoke (self->application_context, volume_changed_dispatch, self);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_VOLUME_CHANGED], 0);
+  }
 }
 
 typedef struct
@@ -2118,6 +2170,18 @@ subtitle_tags_changed_cb (GstElement * playbin, gint stream_index,
       GST_TYPE_PLAYER_SUBTITLE_INFO);
 }
 
+static void
+volume_notify_cb (GObject *obj, GParamSpec *pspec, GstPlayer *self)
+{
+  emit_volume_changed (self);
+}
+
+static void
+mute_notify_cb (GObject *obj, GParamSpec *pspec, GstPlayer *self)
+{
+  emit_mute_changed (self);
+}
+
 static gpointer
 gst_player_main (gpointer data)
 {
@@ -2181,6 +2245,10 @@ gst_player_main (gpointer data)
       G_CALLBACK (audio_tags_changed_cb), self);
   g_signal_connect (self->playbin, "text-tags-changed",
       G_CALLBACK (subtitle_tags_changed_cb), self);
+  g_signal_connect (self->playbin, "notify::volume",
+      G_CALLBACK (volume_notify_cb), self);
+  g_signal_connect (self->playbin, "notify::mute",
+      G_CALLBACK (mute_notify_cb), self);
 
   self->target_state = GST_STATE_NULL;
   self->current_state = GST_STATE_NULL;
