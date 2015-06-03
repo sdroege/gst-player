@@ -1516,7 +1516,6 @@ main (gint argc, gchar ** argv)
   g_signal_connect (play.player, "media-info-updated",
       G_CALLBACK (media_info_updated_cb), &play);
 
-
   gtk_main ();
 
   play_clear (&play);
