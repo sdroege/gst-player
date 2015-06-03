@@ -1516,7 +1516,7 @@ main (gint argc, gchar ** argv)
 
   play_current_uri (&play, g_list_first (play.uris), NULL);
   
-	gtk_main ();
+  gtk_main ();
 
   play_clear (&play);
 
