@@ -1506,8 +1506,6 @@ main (gint argc, gchar ** argv)
       gst_player_visualizations_free (viss);
   }
 
-  play_current_uri (&play, g_list_first (play.uris), NULL);
-
   g_signal_connect (play.player, "position-updated",
       G_CALLBACK (position_updated_cb), &play);
   g_signal_connect (play.player, "duration-changed",
@@ -1516,7 +1514,9 @@ main (gint argc, gchar ** argv)
   g_signal_connect (play.player, "media-info-updated",
       G_CALLBACK (media_info_updated_cb), &play);
 
-  gtk_main ();
+  play_current_uri (&play, g_list_first (play.uris), NULL);
+  
+	gtk_main ();
 
   play_clear (&play);
 
