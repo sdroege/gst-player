@@ -29,6 +29,15 @@ G_BEGIN_DECLS
 GType        gst_player_state_get_type                (void);
 #define      GST_TYPE_PLAYER_STATE                    (gst_player_state_get_type ())
 
+/**
+ * GstPlayerState:
+ * @GST_PLAYER_STATE_STOPPED: the player is stopped.
+ * @GST_PLAYER_STATE_BUFFERING: the player is buffering from the
+ * network.
+ * @GST_PLAYER_STATE_PAUSED: the player is paused.
+ * @GST_PLAYER_STATE_PLAYING: the player is currently playing a
+ * stream.
+ */
 typedef enum
 {
   GST_PLAYER_STATE_STOPPED,
@@ -44,6 +53,10 @@ GType        gst_player_error_get_type                (void);
 #define      GST_PLAYER_ERROR                         (gst_player_error_quark ())
 #define      GST_TYPE_PLAYER_ERROR                    (gst_player_error_get_type ())
 
+/**
+ * GstPlayerError:
+ * @GST_PLAYER_ERROR_FAILED: generic error.
+ */
 typedef enum {
   GST_PLAYER_ERROR_FAILED = 0
 } GstPlayerError;
@@ -139,6 +152,13 @@ void         gst_player_set_visualization_enabled     (GstPlayer    * player,
 gchar *      gst_player_get_current_visualization     (GstPlayer    * player);
 
 typedef struct _GstPlayerVisualization GstPlayerVisualization;
+/**
+ * GstPlayerVisualization:
+ * @name: name of the visualization.
+ * @description: description of the visualization.
+ *
+ * A #GstPlayerVisualization descriptor.
+ */
 struct _GstPlayerVisualization {
   gchar *name;
   gchar *description;
