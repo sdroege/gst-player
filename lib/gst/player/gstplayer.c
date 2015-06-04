@@ -2799,6 +2799,8 @@ gst_player_get_current_subtitle_track (GstPlayer * self)
  * gst_player_set_audio_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Sets the audio track @stream_idex.
  */
 gboolean
 gst_player_set_audio_track (GstPlayer * self, gint stream_index)
@@ -2825,6 +2827,8 @@ gst_player_set_audio_track (GstPlayer * self, gint stream_index)
  * gst_player_set_video_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Sets the video track @stream_index.
  */
 gboolean
 gst_player_set_video_track (GstPlayer * self, gint stream_index)
@@ -2852,6 +2856,8 @@ gst_player_set_video_track (GstPlayer * self, gint stream_index)
  * gst_player_set_subtitle_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Sets the subtitle strack @stream_index.
  */
 gboolean
 gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
@@ -2874,8 +2880,8 @@ gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
   return TRUE;
 }
 
-/*
- * gst_player_set_audio_enabled:
+/**
+ * gst_player_set_audio_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2894,8 +2900,8 @@ gst_player_set_audio_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
- * gst_player_set_video_enabled:
+/**
+ * gst_player_set_video_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2914,8 +2920,8 @@ gst_player_set_video_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
- * gst_player_set_subtitle_enabled:
+/**
+ * gst_player_set_subtitle_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2934,12 +2940,12 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
+/**
  * gst_player_set_subtitle_uri:
  * @player: #GstPlayer instance
- * @suburi: subtitle uri
+ * @uri: subtitle URI
  *
- * Set the subtitle uri.
+ * Sets the external subtitle URI.
  */
 gboolean
 gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
@@ -2958,13 +2964,14 @@ gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
   return TRUE;
 }
 
-/*
+/**
  * gst_player_get_subtitle_uri:
  * @player: #GstPlayer instance
  *
- * current subtitle uri
+ * current subtitle URI
  *
- * g_free() after usage.
+ * Returns: (transfer full): URI of the current external subtitle.
+ *   g_free() after usage.
  */
 gchar *
 gst_player_get_subtitle_uri (GstPlayer * self)
@@ -3071,12 +3078,13 @@ gst_player_update_visualization_list (void)
   g_mutex_unlock (&vis_lock);
 }
 
-/*
+/**
  * gst_player_visualizations_get:
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type GstPlayerVisualization*): a
- *   NULL terminated array containing all available visualizations. Use
- *   gst_player_visualizations_free() after usage.
+ * Returns: (transfer full) (array zero-terminated=1) (element-type
+ *  GstPlayerVisualization*): a %NULL terminated array containing all
+ *  available visualizations. Use gst_player_visualizations_free()
+ *  after usage.
  *
  */
 GstPlayerVisualization **
@@ -3097,11 +3105,14 @@ gst_player_visualizations_get (void)
   return ret;
 }
 
-/*
+/**
  * gst_player_set_visualization:
- * @player: #GstPlayer instance.
- * @name: visualization element obtained from #gst_player_visualizations_get()
+ * @player: #GstPlayer instance
+ * @name: visualization element obtained from
+ * #gst_player_visualizations_get()
  *
+ * Returns: %TRUE if the visualizations was set correctly. Otherwise,
+ * %FALSE.
  */
 gboolean
 gst_player_set_visualization (GstPlayer * self, const gchar * name)
@@ -3126,9 +3137,9 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
   return TRUE;
 }
 
-/*
+/**
  * gst_player_get_current_visualization:
- * @player: #GstPlayer instance.
+ * @player: #GstPlayer instance
  *
  * Returns: (transfer full): Name of the currently enabled visualization.
  *   g_free() after usage.
@@ -3158,7 +3169,7 @@ gst_player_get_current_visualization (GstPlayer * self)
   return name;
 }
 
-/*
+/**
  * gst_player_set_visualization_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
