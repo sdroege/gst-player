@@ -3265,6 +3265,8 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
 
   if (name) {
     self->current_vis_element = gst_element_factory_make (name, NULL);
+    if (!self->current_vis_element)
+      goto error_no_element;
     gst_object_ref_sink (self->current_vis_element);
   }
   g_object_set (self->playbin, "vis-plugin", self->current_vis_element, NULL);
@@ -3273,6 +3275,11 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
   GST_DEBUG_OBJECT (self, "set vis-plugin to '%s'", name);
 
   return TRUE;
+
+error_no_element:
+  g_mutex_unlock (&self->lock);
+  GST_WARNING_OBJECT (self, "could not find visualization '%s'", name);
+  return FALSE;
 }
 
 /**
