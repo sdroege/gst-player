@@ -1,6 +1,10 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
+datarootdir=${prefix}/share
+datadir=${datarootdir}
+girdir=${datadir}/gir-1.0
+typelibdir=${libdir}/girepository-1.0
 includedir=@includedir@/gst-player-@GST_PLAYER_API_VERSION@
 
 Name: gstreamer-player
