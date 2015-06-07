@@ -2,6 +2,8 @@
 prefix=
 exec_prefix=
 libdir=${pcfiledir}/../lib/gst/player
+girdir=${pcfiledir}/../lib/gst/player
+typelibdir=${pcfiledir}/../lib/gst/player
 includedir=${pcfiledir}/../lib
 
 Name: gstreamer-player
