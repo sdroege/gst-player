@@ -2242,6 +2242,11 @@ gst_player_init_once (gpointer user_data)
   return NULL;
 }
 
+/**
+ * gst_player_new:
+ *
+ * Returns: a new #GstPlayer instance
+ */
 GstPlayer *
 gst_player_new (void)
 {
@@ -2311,6 +2316,12 @@ gst_player_play_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_play:
+ * @player: #GstPlayer instance
+ *
+ * Request to play the loaded stream.
+ */
 void
 gst_player_play (GstPlayer * self)
 {
@@ -2371,6 +2382,12 @@ gst_player_pause_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_pause:
+ * @player: #GstPlayer instance
+ *
+ * Pauses the current stream.
+ */
 void
 gst_player_pause (GstPlayer * self)
 {
@@ -2422,6 +2439,13 @@ gst_player_stop_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_stop:
+ * @player: #GstPlayer instance
+ *
+ * Stops playing the current stream and resets to the first position
+ * in the stream.
+ */
 void
 gst_player_stop (GstPlayer * self)
 {
@@ -2495,6 +2519,14 @@ gst_player_seek_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_seek:
+ * @player: #GstPlayer instance
+ * @position: position to seek in nanoseconds
+ *
+ * Seeks the currently-playing stream to the absolute @position time
+ * in nanoseconds.
+ */
 void
 gst_player_seek (GstPlayer * self, GstClockTime position)
 {
@@ -2544,6 +2576,13 @@ gst_player_seek (GstPlayer * self, GstClockTime position)
   g_mutex_unlock (&self->lock);
 }
 
+/**
+ * gst_player_get_dispatch_to_main_context:
+ * @player: #GstPlayer instance
+ *
+ * Returns: %TRUE if the callbacks are dispatched in the thread's
+ * default main context. Otherwise, %FALSE.
+ */
 gboolean
 gst_player_get_dispatch_to_main_context (GstPlayer * self)
 {
@@ -2556,6 +2595,15 @@ gst_player_get_dispatch_to_main_context (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_dispatch_to_main_context:
+ * @player: #GstPlayer instance
+ * @val: whether the callbacks are dispatched in the thread's default
+ * main context
+ *
+ * Sets whether the callbacks are dispatched in the thread's default
+ * main context.
+ */
 void
 gst_player_set_dispatch_to_main_context (GstPlayer * self, gboolean val)
 {
@@ -2564,6 +2612,15 @@ gst_player_set_dispatch_to_main_context (GstPlayer * self, gboolean val)
   g_object_set (self, "dispatch-to-main-context", val, NULL);
 }
 
+/**
+ * gst_player_get_uri:
+ * @player: #GstPlayer instance
+ *
+ * Gets the URI of the currently-playing stream.
+ *
+ * Returns: (transfer full): a string containing the URI of the
+ * currently-playing stream. g_free() after usage.
+ */
 gchar *
 gst_player_get_uri (GstPlayer * self)
 {
@@ -2576,6 +2633,13 @@ gst_player_get_uri (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_uri:
+ * @player: #GstPlayer instance
+ * @uri: next URI to play.
+ *
+ * Sets the next URI to play.
+ */
 void
 gst_player_set_uri (GstPlayer * self, const gchar * val)
 {
@@ -2584,6 +2648,13 @@ gst_player_set_uri (GstPlayer * self, const gchar * val)
   g_object_set (self, "uri", val, NULL);
 }
 
+/**
+ * gst_player_get_position:
+ * @player: #GstPlayer instance
+ *
+ * Returns: the absolute position time, in nanoseconds, of the
+ * currently-playing stream.
+ */
 GstClockTime
 gst_player_get_position (GstPlayer * self)
 {
@@ -2596,6 +2667,15 @@ gst_player_get_position (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_get_duration:
+ * @player: #GstPlayer instance
+ *
+ * Retrieves the duration of the media stream that self represents.
+ *
+ * Returns: the duration of the currently-playing media stream, in
+ * nanoseconds.
+ */
 GstClockTime
 gst_player_get_duration (GstPlayer * self)
 {
@@ -2608,6 +2688,14 @@ gst_player_get_duration (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_get_volume:
+ * @player: #GstPlayer instance
+ *
+ * Returns the current volume level, as a percentage between 0 and 1.
+ *
+ * Returns: the volume as percentage between 0 and 1.
+ */
 gdouble
 gst_player_get_volume (GstPlayer * self)
 {
@@ -2620,6 +2708,13 @@ gst_player_get_volume (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_volume:
+ * @player: #GstPlayer instance
+ * @val: the new volume level, as a percentage between 0 and 1
+ *
+ * Sets the volume level of the stream as a percentage between 0 and 1.
+ */
 void
 gst_player_set_volume (GstPlayer * self, gdouble val)
 {
@@ -2628,6 +2723,12 @@ gst_player_set_volume (GstPlayer * self, gdouble val)
   g_object_set (self, "volume", val, NULL);
 }
 
+/**
+ * gst_player_get_mute:
+ * @player: #GstPlayer instance
+ *
+ * Returns: %TRUE if the currently-playing stream is muted.
+ */
 gboolean
 gst_player_get_mute (GstPlayer * self)
 {
@@ -2640,6 +2741,13 @@ gst_player_get_mute (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_mute:
+ * @player: #GstPlayer instance
+ * @val: Mute state the should be set
+ *
+ * %TRUE if the currently-playing stream should be muted.
+ */
 void
 gst_player_set_mute (GstPlayer * self, gboolean val)
 {
@@ -2667,6 +2775,14 @@ gst_player_get_window_handle (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_window_handle:
+ * @player: #GstPlayer instance
+ * @val: handle referencing to the platform specific window
+ *
+ * Sets the platform specific window handle into which the video
+ * should be rendered
+ **/
 void
 gst_player_set_window_handle (GstPlayer * self, gpointer val)
 {
@@ -2799,6 +2915,8 @@ gst_player_get_current_subtitle_track (GstPlayer * self)
  * gst_player_set_audio_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Sets the audio track @stream_idex.
  */
 gboolean
 gst_player_set_audio_track (GstPlayer * self, gint stream_index)
@@ -2825,6 +2943,8 @@ gst_player_set_audio_track (GstPlayer * self, gint stream_index)
  * gst_player_set_video_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Sets the video track @stream_index.
  */
 gboolean
 gst_player_set_video_track (GstPlayer * self, gint stream_index)
@@ -2852,6 +2972,8 @@ gst_player_set_video_track (GstPlayer * self, gint stream_index)
  * gst_player_set_subtitle_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Sets the subtitle strack @stream_index.
  */
 gboolean
 gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
@@ -2874,8 +2996,8 @@ gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
   return TRUE;
 }
 
-/*
- * gst_player_set_audio_enabled:
+/**
+ * gst_player_set_audio_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2894,8 +3016,8 @@ gst_player_set_audio_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
- * gst_player_set_video_enabled:
+/**
+ * gst_player_set_video_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2914,8 +3036,8 @@ gst_player_set_video_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
- * gst_player_set_subtitle_enabled:
+/**
+ * gst_player_set_subtitle_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2934,12 +3056,12 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
+/**
  * gst_player_set_subtitle_uri:
  * @player: #GstPlayer instance
- * @suburi: subtitle uri
+ * @uri: subtitle URI
  *
- * Set the subtitle uri.
+ * Sets the external subtitle URI.
  */
 gboolean
 gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
@@ -2958,13 +3080,14 @@ gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
   return TRUE;
 }
 
-/*
+/**
  * gst_player_get_subtitle_uri:
  * @player: #GstPlayer instance
  *
- * current subtitle uri
+ * current subtitle URI
  *
- * g_free() after usage.
+ * Returns: (transfer full): URI of the current external subtitle.
+ *   g_free() after usage.
  */
 gchar *
 gst_player_get_subtitle_uri (GstPlayer * self)
@@ -2982,6 +3105,13 @@ G_DEFINE_BOXED_TYPE (GstPlayerVisualization, gst_player_visualization,
     (GBoxedCopyFunc) gst_player_visualization_copy,
     (GBoxedFreeFunc) gst_player_visualization_free);
 
+/**
+ * gst_player_visualization_free:
+ * @vis: #GstPlayerVisualization instance
+ *
+ * Frees #GstPlayerVisualization allocated using g_new() or
+ * gst_player_visualization_copy().
+ */
 void
 gst_player_visualization_free (GstPlayerVisualization * vis)
 {
@@ -2992,6 +3122,15 @@ gst_player_visualization_free (GstPlayerVisualization * vis)
   g_free (vis);
 }
 
+/**
+ * gst_player_visualization_copy:
+ * @vis: #GstPlayerVisualization instance
+ *
+ * Makes a copy of the #GstPlayerVisualization. The result must be
+ * freed using gst_player_visualization_free().
+ *
+ * Returns: (transfer full): an allocated copy of @vis.
+ */
 GstPlayerVisualization *
 gst_player_visualization_copy (const GstPlayerVisualization * vis)
 {
@@ -3006,6 +3145,12 @@ gst_player_visualization_copy (const GstPlayerVisualization * vis)
   return ret;
 }
 
+/**
+ * gst_player_visualizations_free:
+ * @viss: a %NULL terminated array of #GstPlayerVisualization to free
+ *
+ * Frees a %NULL terminated array of #GstPlayerVisualization.
+ */
 void
 gst_player_visualizations_free (GstPlayerVisualization ** viss)
 {
@@ -3071,12 +3216,13 @@ gst_player_update_visualization_list (void)
   g_mutex_unlock (&vis_lock);
 }
 
-/*
+/**
  * gst_player_visualizations_get:
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type GstPlayerVisualization*): a
- *   NULL terminated array containing all available visualizations. Use
- *   gst_player_visualizations_free() after usage.
+ * Returns: (transfer full) (array zero-terminated=1) (element-type
+ *  GstPlayerVisualization*): a %NULL terminated array containing all
+ *  available visualizations. Use gst_player_visualizations_free()
+ *  after usage.
  *
  */
 GstPlayerVisualization **
@@ -3097,11 +3243,14 @@ gst_player_visualizations_get (void)
   return ret;
 }
 
-/*
+/**
  * gst_player_set_visualization:
- * @player: #GstPlayer instance.
- * @name: visualization element obtained from #gst_player_visualizations_get()
+ * @player: #GstPlayer instance
+ * @name: visualization element obtained from
+ * #gst_player_visualizations_get()
  *
+ * Returns: %TRUE if the visualizations was set correctly. Otherwise,
+ * %FALSE.
  */
 gboolean
 gst_player_set_visualization (GstPlayer * self, const gchar * name)
@@ -3126,9 +3275,9 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
   return TRUE;
 }
 
-/*
+/**
  * gst_player_get_current_visualization:
- * @player: #GstPlayer instance.
+ * @player: #GstPlayer instance
  *
  * Returns: (transfer full): Name of the currently enabled visualization.
  *   g_free() after usage.
@@ -3158,7 +3307,7 @@ gst_player_get_current_visualization (GstPlayer * self)
   return name;
 }
 
-/*
+/**
  * gst_player_set_visualization_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
@@ -3203,6 +3352,14 @@ gst_player_state_get_type (void)
   return (GType) id;
 }
 
+/**
+ * gst_player_state_get_name:
+ * @state: a #GstPlayerState
+ *
+ * Gets a string representing the given state.
+ *
+ * Returns: (transfer none): a string with the name of the state.
+ */
 const gchar *
 gst_player_state_get_name (GstPlayerState state)
 {
@@ -3238,6 +3395,14 @@ gst_player_error_get_type (void)
   return (GType) id;
 }
 
+/**
+ * gst_player_error_get_name:
+ * @error: a #GstPlayerError
+ *
+ * Gets a string representing the given error.
+ *
+ * Returns: (transfer none): a string with the given error.
+ */
 const gchar *
 gst_player_error_get_name (GstPlayerError error)
 {
