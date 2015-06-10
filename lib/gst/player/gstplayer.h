@@ -171,6 +171,35 @@ void                      gst_player_visualization_free  (GstPlayerVisualization
 GstPlayerVisualization ** gst_player_visualizations_get  (void);
 void                      gst_player_visualizations_free (GstPlayerVisualization **viss);
 
+
+#define GST_TYPE_PLAYER_COLOR_BALANCE_TYPE   (gst_player_color_balance_type_get_type ())
+GType gst_player_color_balance_type_get_type (void);
+
+/**
+ * GstPlayerColorBalanceType:
+ * @GST_PLAYER_COLOR_BALANCE_BRIGHTNESS: brightness or black level.
+ * @GST_PLAYER_COLOR_BALANCE_CONTRAST: contrast or luma gain.
+ * @GST_PLAYER_COLOR_BALANCE_SATURATION: color saturation or chroma
+ * gain.
+ * @GST_PLAYER_COLOR_BALANCE_HUE: hue or color balance.
+ */
+typedef enum
+{
+  GST_PLAYER_COLOR_BALANCE_BRIGHTNESS,
+  GST_PLAYER_COLOR_BALANCE_CONTRAST,
+  GST_PLAYER_COLOR_BALANCE_SATURATION,
+  GST_PLAYER_COLOR_BALANCE_HUE,
+} GstPlayerColorBalanceType;
+
+const gchar *gst_player_color_balance_type_get_name (GstPlayerColorBalanceType type);
+
+gboolean gst_player_has_color_balance (GstPlayer * player);
+void     gst_player_set_color_balance (GstPlayer * player,
+                                       GstPlayerColorBalanceType type,
+                                       gdouble value);
+gdouble  gst_player_get_color_balance (GstPlayer * player,
+                                       GstPlayerColorBalanceType type);
+
 G_END_DECLS
 
 #endif /* __GST_PLAYER_H__ */

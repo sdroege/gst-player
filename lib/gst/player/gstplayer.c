@@ -45,6 +45,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <gst/video/colorbalance.h>
 #include <gst/tag/tag.h>
 #include <gst/pbutils/descriptions.h>
 
@@ -3335,8 +3336,178 @@ gst_player_set_visualization_enabled (GstPlayer * self, gboolean enabled)
       enabled ? "Enabled" : "Disabled");
 }
 
+struct CBChannelMap
+{
+  const gchar *label;           /* channel label name */
+  const gchar *name;            /* get_name () */
+};
+
+static const struct CBChannelMap cb_channel_map[] = {
+  /* GST_PLAYER_COLOR_BALANCE_BRIGHTNESS */ {"BRIGHTNESS", "brightness"},
+  /* GST_PLAYER_COLOR_BALANCE_CONTRAST   */ {"CONTRAST", "contrast"},
+  /* GST_PLAYER_COLOR_BALANCE_SATURATION */ {"SATURATION", "saturation"},
+  /* GST_PLAYER_COLOR_BALANCE_HUE        */ {"HUE", "hue"},
+};
+
+static GstColorBalanceChannel *
+gst_player_color_balance_find_channel (GstPlayer * self,
+    GstPlayerColorBalanceType type)
+{
+  GstColorBalanceChannel *channel;
+  const GList *l, *channels;
+
+  if (type < GST_PLAYER_COLOR_BALANCE_BRIGHTNESS ||
+      type > GST_PLAYER_COLOR_BALANCE_HUE)
+    return NULL;
+
+  channels =
+      gst_color_balance_list_channels (GST_COLOR_BALANCE (self->playbin));
+  for (l = channels; l; l = l->next) {
+    channel = l->data;
+    if (g_strrstr (cb_channel_map[type].label, channel->label))
+      return channel;
+  }
+
+  return NULL;
+}
+
+/**
+ * gst_player_has_color_balance:
+ * @player:#GstPlayer instance
+ *
+ * Checks whether the @player has color balance support available.
+ *
+ * Returns: %TRUE if @player has color balance support. Otherwise,
+ *   %FALSE.
+ */
+gboolean
+gst_player_has_color_balance (GstPlayer * self)
+{
+  const GList *channels;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  if (!GST_IS_COLOR_BALANCE (self->playbin))
+    return FALSE;
+
+  channels =
+      gst_color_balance_list_channels (GST_COLOR_BALANCE (self->playbin));
+  return (channels != NULL);
+}
+
+/**
+ * gst_player_set_color_balance:
+ * @player: #GstPlayer instance
+ * @type: #GstPlayerColorBalanceType
+ * @value: The new value for the @type, ranged [0,1]
+ *
+ * Sets the current value of the indicated channel @type to the passed
+ * value.
+ */
+void
+gst_player_set_color_balance (GstPlayer * self, GstPlayerColorBalanceType type,
+    gdouble value)
+{
+  GstColorBalanceChannel *channel;
+  gdouble new_val;
+
+  g_return_if_fail (GST_IS_PLAYER (self));
+  g_return_if_fail (value >= 0.0 && value <= 1.0);
+
+  if (!GST_IS_COLOR_BALANCE (self->playbin))
+    return;
+
+  channel = gst_player_color_balance_find_channel (self, type);
+  if (!channel)
+    return;
+
+  value = CLAMP (value, 0.0, 1.0);
+
+  /* Convert to channel range */
+  new_val = channel->min_value + value * ((gdouble) channel->max_value -
+      (gdouble) channel->min_value);
+
+  gst_color_balance_set_value (GST_COLOR_BALANCE (self->playbin), channel,
+      new_val);
+}
+
+/**
+ * gst_player_get_color_balance:
+ * @player: #GstPlayer instance
+ * @type: #GstPlayerColorBalanceType
+ *
+ * Retrieve the current value of the indicated @type.
+ *
+ * Returns: The current value of @type, between [0,1]. In case of
+ *   error -1 is returned.
+ */
+gdouble
+gst_player_get_color_balance (GstPlayer * self, GstPlayerColorBalanceType type)
+{
+  GstColorBalanceChannel *channel;
+  gint value;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), -1);
+
+  if (!GST_IS_COLOR_BALANCE (self->playbin))
+    return -1;
+
+  channel = gst_player_color_balance_find_channel (self, type);
+  if (!channel)
+    return -1;
+
+  value = gst_color_balance_get_value (GST_COLOR_BALANCE (self->playbin),
+      channel);
+
+  return ((gdouble) value -
+      (gdouble) channel->min_value) / ((gdouble) channel->max_value -
+      (gdouble) channel->min_value);
+}
+
 #define C_ENUM(v) ((gint) v)
 #define C_FLAGS(v) ((guint) v)
+
+GType
+gst_player_color_balance_type_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_HUE), "GST_PLAYER_COLOR_BALANCE_HUE",
+        "hue"},
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_BRIGHTNESS),
+        "GST_PLAYER_COLOR_BALANCE_BRIGHTNESS", "brightness"},
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_SATURATION),
+        "GST_PLAYER_COLOR_BALANCE_SATURATION", "saturation"},
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_CONTRAST),
+        "GST_PLAYER_COLOR_BALANCE_CONTRAST", "contrast"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstPlayerColorBalanceType", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+/**
+ * gst_player_color_balance_type_get_name:
+ * @type: a #GstPlayerColorBalanceType
+ *
+ * Gets a string representing the given color balance type.
+ *
+ * Returns: (transfer none): a string with the name of the color
+ *   balance type.
+ */
+const gchar *
+gst_player_color_balance_type_get_name (GstPlayerColorBalanceType type)
+{
+  g_return_val_if_fail (type >= GST_PLAYER_COLOR_BALANCE_BRIGHTNESS &&
+      type <= GST_PLAYER_COLOR_BALANCE_HUE, NULL);
+
+  return cb_channel_map[type].name;
+}
 
 GType
 gst_player_state_get_type (void)
