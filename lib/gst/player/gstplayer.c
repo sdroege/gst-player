@@ -33,7 +33,7 @@
  * - Gapless playback
  * - Frame stepping
  * - Subtitle font, connection speed
- * - Color balance, deinterlacing
+ * - Deinterlacing
  * - Buffering control (-> progressive downloading)
  * - Playlist/queue object
  * - Custom video sink (e.g. embed in GL scene)
