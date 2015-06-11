@@ -28,7 +28,6 @@
 /* TODO:
  *
  * - Playback rate
- * - volume/mute change notification
  * - Equalizer
  * - Gapless playback
  * - Frame stepping
