@@ -446,7 +446,9 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set uri=%s", self->uri);
       g_mutex_unlock (&self->lock);
 
-      g_main_context_invoke (self->context, gst_player_set_uri_internal, self);
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_uri_internal, g_object_ref (self),
+          (GDestroyNotify) g_object_unref);
       break;
     }
     case PROP_SUBURI:{
@@ -458,8 +460,9 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set suburi=%s", self->suburi);
       g_mutex_unlock (&self->lock);
 
-      g_main_context_invoke (self->context, gst_player_set_suburi_internal,
-          self);
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_suburi_internal, g_object_ref (self),
+          (GDestroyNotify) g_object_unref);
       break;
     }
     case PROP_VOLUME:
@@ -604,6 +607,13 @@ state_changed_dispatch (gpointer user_data)
 }
 
 static void
+state_changed_signal_data_free (StateChangedSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
+}
+
+static void
 change_state (GstPlayer * self, GstPlayerState state)
 {
   if (state == self->app_state)
@@ -619,11 +629,11 @@ change_state (GstPlayer * self, GstPlayerState state)
           signals[SIGNAL_STATE_CHANGED], 0, NULL, NULL, NULL) != 0) {
     StateChangedSignalData *data = g_new (StateChangedSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->state = state;
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, state_changed_dispatch, data,
-        (GDestroyNotify) g_free);
+        (GDestroyNotify) state_changed_signal_data_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_STATE_CHANGED], 0, state);
   }
@@ -640,12 +650,21 @@ position_updated_dispatch (gpointer user_data)
 {
   PositionUpdatedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_POSITION_UPDATED], 0,
-      data->position);
-  g_object_notify_by_pspec (G_OBJECT (data->player),
-      param_specs[PROP_POSITION]);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_POSITION_UPDATED], 0,
+        data->position);
+    g_object_notify_by_pspec (G_OBJECT (data->player),
+        param_specs[PROP_POSITION]);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+position_updated_signal_data_free (PositionUpdatedSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static gboolean
@@ -654,7 +673,9 @@ tick_cb (gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint64 position;
 
-  if (gst_element_query_position (self->playbin, GST_FORMAT_TIME, &position)) {
+  if (self->target_state >= GST_STATE_PAUSED
+      && gst_element_query_position (self->playbin, GST_FORMAT_TIME,
+          &position)) {
     GST_LOG_OBJECT (self, "Position %" GST_TIME_FORMAT,
         GST_TIME_ARGS (position));
 
@@ -663,11 +684,11 @@ tick_cb (gpointer user_data)
             signals[SIGNAL_POSITION_UPDATED], 0, NULL, NULL, NULL) != 0) {
       PositionUpdatedSignalData *data = g_new (PositionUpdatedSignalData, 1);
 
-      data->player = self;
+      data->player = g_object_ref (self);
       data->position = position;
       g_main_context_invoke_full (self->application_context,
           G_PRIORITY_DEFAULT, position_updated_dispatch, data,
-          (GDestroyNotify) g_free);
+          (GDestroyNotify) position_updated_signal_data_free);
     } else {
       g_signal_emit (self, signals[SIGNAL_POSITION_UPDATED], 0, position);
       g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_POSITION]);
@@ -756,6 +777,7 @@ error_dispatch (gpointer user_data)
 static void
 free_error_signal_data (ErrorSignalData * data)
 {
+  g_object_unref (data->player);
   g_clear_error (&data->err);
   g_free (data);
 }
@@ -771,7 +793,7 @@ emit_error (GstPlayer * self, GError * err)
           signals[SIGNAL_ERROR], 0, NULL, NULL, NULL) != 0) {
     ErrorSignalData *data = g_new (ErrorSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->err = g_error_copy (err);
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, error_dispatch, data,
@@ -923,7 +945,8 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   if (self->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_END_OF_STREAM], 0, NULL, NULL, NULL) != 0) {
-    g_main_context_invoke (self->application_context, eos_dispatch, self);
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        eos_dispatch, g_object_ref (self), (GDestroyNotify) g_object_unref);
   } else {
     g_signal_emit (self, signals[SIGNAL_END_OF_STREAM], 0);
   }
@@ -943,9 +966,18 @@ buffering_dispatch (gpointer user_data)
 {
   BufferingSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_BUFFERING], 0, data->percent);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_BUFFERING], 0, data->percent);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+buffering_signal_data_free (BufferingSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static void
@@ -954,6 +986,8 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint percent;
 
+  if (self->target_state < GST_STATE_PAUSED)
+    return;
   if (self->is_live)
     return;
 
@@ -981,11 +1015,11 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
             signals[SIGNAL_BUFFERING], 0, NULL, NULL, NULL) != 0) {
       BufferingSignalData *data = g_new (BufferingSignalData, 1);
 
-      data->player = self;
+      data->player = g_object_ref (self);
       data->percent = percent;
       g_main_context_invoke_full (self->application_context,
           G_PRIORITY_DEFAULT, buffering_dispatch, data,
-          (GDestroyNotify) g_free);
+          (GDestroyNotify) buffering_signal_data_free);
     } else {
       g_signal_emit (self, signals[SIGNAL_BUFFERING], 0, percent);
     }
@@ -1051,10 +1085,20 @@ video_dimensions_changed_dispatch (gpointer user_data)
 {
   VideoDimensionsChangedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
-      data->width, data->height);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
+        data->width, data->height);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+video_dimensions_changed_signal_data_free (VideoDimensionsChangedSignalData *
+    data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static void
@@ -1100,12 +1144,12 @@ out:
     VideoDimensionsChangedSignalData *data =
         g_new (VideoDimensionsChangedSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->width = width;
     data->height = height;
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
-        (GDestroyNotify) g_free);
+        (GDestroyNotify) video_dimensions_changed_signal_data_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
         width, height);
@@ -1131,12 +1175,21 @@ duration_changed_dispatch (gpointer user_data)
 {
   DurationChangedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_DURATION_CHANGED], 0,
-      data->duration);
-  g_object_notify_by_pspec (G_OBJECT (data->player),
-      param_specs[PROP_DURATION]);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_DURATION_CHANGED], 0,
+        data->duration);
+    g_object_notify_by_pspec (G_OBJECT (data->player),
+        param_specs[PROP_DURATION]);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+duration_changed_signal_data_free (DurationChangedSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static void
@@ -1150,11 +1203,11 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
           signals[SIGNAL_DURATION_CHANGED], 0, NULL, NULL, NULL) != 0) {
     DurationChangedSignalData *data = g_new (DurationChangedSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->duration = duration;
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, duration_changed_dispatch, data,
-        (GDestroyNotify) g_free);
+        (GDestroyNotify) duration_changed_signal_data_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_DURATION_CHANGED], 0, duration);
     g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_DURATION]);
@@ -1477,8 +1530,10 @@ media_info_updated_dispatch (gpointer user_data)
 {
   MediaInfoUpdatedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_MEDIA_INFO_UPDATED], 0,
-      data->info);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_MEDIA_INFO_UPDATED], 0,
+        data->info);
+  }
 
   return FALSE;
 }
@@ -1486,6 +1541,7 @@ media_info_updated_dispatch (gpointer user_data)
 static void
 free_media_info_updated_signal_data (MediaInfoUpdatedSignalData * data)
 {
+  g_object_unref (data->player);
   g_object_unref (data->info);
   g_free (data);
 }
@@ -1502,7 +1558,7 @@ emit_media_info_updated_signal (GstPlayer * self)
 {
   if (self->dispatch_to_main_context) {
     MediaInfoUpdatedSignalData *data = g_new (MediaInfoUpdatedSignalData, 1);
-    data->player = self;
+    data->player = g_object_ref (self);
     g_mutex_lock (&self->lock);
     data->info = gst_player_media_info_copy (self->media_info);
     g_mutex_unlock (&self->lock);
@@ -2145,8 +2201,9 @@ volume_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
   if (self->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_VOLUME_CHANGED], 0, NULL, NULL, NULL) != 0) {
-    g_main_context_invoke (self->application_context, volume_changed_dispatch,
-        self);
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        volume_changed_dispatch, g_object_ref (self),
+        (GDestroyNotify) g_object_unref);
   } else {
     g_signal_emit (self, signals[SIGNAL_VOLUME_CHANGED], 0);
     g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_VOLUME]);
@@ -2168,8 +2225,9 @@ mute_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
   if (self->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_MUTE_CHANGED], 0, NULL, NULL, NULL) != 0) {
-    g_main_context_invoke (self->application_context, mute_changed_dispatch,
-        self);
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        mute_changed_dispatch, g_object_ref (self),
+        (GDestroyNotify) g_object_unref);
   } else {
     g_signal_emit (self, signals[SIGNAL_MUTE_CHANGED], 0);
     g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_MUTE]);
@@ -2389,7 +2447,9 @@ gst_player_play (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_play_internal, self);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_play_internal, g_object_ref (self),
+      (GDestroyNotify) g_object_unref);
 }
 
 static gboolean
@@ -2455,7 +2515,9 @@ gst_player_pause (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_pause_internal, self);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_pause_internal, g_object_ref (self),
+      (GDestroyNotify) g_object_unref);
 }
 
 static gboolean
@@ -2513,7 +2575,9 @@ gst_player_stop (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_stop_internal, self);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_stop_internal, g_object_ref (self),
+      (GDestroyNotify) g_object_unref);
 }
 
 /* Must be called with lock from main context, releases lock! */
