@@ -2308,7 +2308,7 @@ gst_player_play_internal (gpointer user_data)
         GST_SEEK_FLAG_FLUSH, 0);
     if (!ret) {
       GST_ERROR_OBJECT (self, "Seek to beginning failed");
-      gst_element_set_state (self->playbin, GST_STATE_READY);
+      gst_player_stop_internal (self);
       gst_player_play_internal (self);
     }
   }
@@ -2374,7 +2374,7 @@ gst_player_pause_internal (gpointer user_data)
         GST_SEEK_FLAG_FLUSH, 0);
     if (!ret) {
       GST_ERROR_OBJECT (self, "Seek to beginning failed");
-      gst_element_set_state (self->playbin, GST_STATE_READY);
+      gst_player_stop_internal (self);
       gst_player_pause_internal (self);
     }
   }
