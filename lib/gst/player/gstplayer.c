@@ -2134,6 +2134,7 @@ static gboolean
 volume_changed_dispatch (gpointer user_data)
 {
   g_signal_emit (user_data, signals[SIGNAL_VOLUME_CHANGED], 0);
+  g_object_notify_by_pspec (G_OBJECT (user_data), param_specs[PROP_VOLUME]);
 
   return G_SOURCE_REMOVE;
 }
@@ -2148,6 +2149,7 @@ volume_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
         self);
   } else {
     g_signal_emit (self, signals[SIGNAL_VOLUME_CHANGED], 0);
+    g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_VOLUME]);
   }
 }
 
@@ -2155,6 +2157,7 @@ static gboolean
 mute_changed_dispatch (gpointer user_data)
 {
   g_signal_emit (user_data, signals[SIGNAL_MUTE_CHANGED], 0);
+  g_object_notify_by_pspec (G_OBJECT (user_data), param_specs[PROP_MUTE]);
 
   return G_SOURCE_REMOVE;
 }
@@ -2169,6 +2172,7 @@ mute_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
         self);
   } else {
     g_signal_emit (self, signals[SIGNAL_MUTE_CHANGED], 0);
+    g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_MUTE]);
   }
 }
 
