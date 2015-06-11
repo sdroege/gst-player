@@ -3492,7 +3492,7 @@ gst_player_color_balance_find_channel (GstPlayer * self,
       gst_color_balance_list_channels (GST_COLOR_BALANCE (self->playbin));
   for (l = channels; l; l = l->next) {
     channel = l->data;
-    if (g_strrstr (cb_channel_map[type].label, channel->label))
+    if (g_strrstr (channel->label, cb_channel_map[type].label))
       return channel;
   }
 
