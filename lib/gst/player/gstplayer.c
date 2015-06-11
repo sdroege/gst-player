@@ -3037,6 +3037,8 @@ gst_player_get_current_subtitle_track (GstPlayer * self)
  * @player: #GstPlayer instance
  * @stream_index: stream index
  *
+ * Returns: %TRUE or %FALSE
+ *
  * Sets the audio track @stream_idex.
  */
 gboolean
@@ -3064,6 +3066,8 @@ gst_player_set_audio_track (GstPlayer * self, gint stream_index)
  * gst_player_set_video_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Returns: %TRUE or %FALSE
  *
  * Sets the video track @stream_index.
  */
@@ -3093,6 +3097,8 @@ gst_player_set_video_track (GstPlayer * self, gint stream_index)
  * gst_player_set_subtitle_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Returns: %TRUE or %FALSE
  *
  * Sets the subtitle strack @stream_index.
  */
@@ -3181,6 +3187,8 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
  * gst_player_set_subtitle_uri:
  * @player: #GstPlayer instance
  * @uri: subtitle URI
+ *
+ * Returns: %TRUE or %FALSE
  *
  * Sets the external subtitle URI.
  */
