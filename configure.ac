@@ -63,6 +63,9 @@ AC_SUBST(GST_PREFIX)
 PKG_CHECK_MODULES(GTK, [gtk+-3.0], [have_gtk="yes"], [have_gtk="no"])
 AM_CONDITIONAL(HAVE_GTK, test "x$have_gtk" != "xno")
 
+PKG_CHECK_MODULES(GTK_X11, [gtk+-x11-3.0 x11], [have_gtk_x11="yes"], [have_gtk_x11="no"])
+AM_CONDITIONAL(HAVE_GTK_X11, test "x$have_gtk_x11" != "xno")
+
 GOBJECT_INTROSPECTION_CHECK([1.31.1])
 GTK_DOC_CHECK([1.12])
 
