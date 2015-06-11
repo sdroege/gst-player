@@ -447,8 +447,7 @@ gst_player_set_property (GObject * object, guint prop_id,
       g_mutex_unlock (&self->lock);
 
       g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-          gst_player_set_uri_internal, g_object_ref (self),
-          (GDestroyNotify) g_object_unref);
+          gst_player_set_uri_internal, self, NULL);
       break;
     }
     case PROP_SUBURI:{
@@ -461,8 +460,7 @@ gst_player_set_property (GObject * object, guint prop_id,
       g_mutex_unlock (&self->lock);
 
       g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-          gst_player_set_suburi_internal, g_object_ref (self),
-          (GDestroyNotify) g_object_unref);
+          gst_player_set_suburi_internal, self, NULL);
       break;
     }
     case PROP_VOLUME:
@@ -2448,8 +2446,7 @@ gst_player_play (GstPlayer * self)
   g_return_if_fail (GST_IS_PLAYER (self));
 
   g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-      gst_player_play_internal, g_object_ref (self),
-      (GDestroyNotify) g_object_unref);
+      gst_player_play_internal, self, NULL);
 }
 
 static gboolean
@@ -2516,8 +2513,7 @@ gst_player_pause (GstPlayer * self)
   g_return_if_fail (GST_IS_PLAYER (self));
 
   g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-      gst_player_pause_internal, g_object_ref (self),
-      (GDestroyNotify) g_object_unref);
+      gst_player_pause_internal, self, NULL);
 }
 
 static gboolean
@@ -2576,8 +2572,7 @@ gst_player_stop (GstPlayer * self)
   g_return_if_fail (GST_IS_PLAYER (self));
 
   g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-      gst_player_stop_internal, g_object_ref (self),
-      (GDestroyNotify) g_object_unref);
+      gst_player_stop_internal, self, NULL);
 }
 
 /* Must be called with lock from main context, releases lock! */
