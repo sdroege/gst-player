@@ -78,6 +78,7 @@ enum
   PROP_CURRENT_SUBTITLE_TRACK,
   PROP_VOLUME,
   PROP_MUTE,
+  PROP_RATE,
   PROP_WINDOW_HANDLE,
   PROP_PIPELINE,
   PROP_LAST
@@ -130,6 +131,8 @@ struct _GstPlayer
   gboolean is_live, is_eos;
   GSource *tick_source, *ready_timeout_source;
 
+  gdouble rate;
+
   GstPlayerState app_state;
   gint buffering;
 
@@ -172,6 +175,7 @@ static void gst_player_seek_internal_locked (GstPlayer * self);
 static gboolean gst_player_stop_internal (gpointer user_data);
 static gboolean gst_player_pause_internal (gpointer user_data);
 static gboolean gst_player_play_internal (gpointer user_data);
+static gboolean gst_player_set_rate_internal (gpointer user_data);
 static void change_state (GstPlayer * self, GstPlayerState state);
 
 static GstPlayerMediaInfo *gst_player_media_info_create (GstPlayer * self);
@@ -288,6 +292,10 @@ gst_player_class_init (GstPlayerClass * klass)
       g_param_spec_object ("pipeline", "Pipeline",
       "GStreamer pipeline that is used",
       GST_TYPE_ELEMENT, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  param_specs[PROP_RATE] =
+      g_param_spec_double ("rate", "rate", "Playback rate",
+      -64.0, 64.0, 1.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, param_specs);
 
@@ -467,6 +475,15 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set volume=%lf", g_value_get_double (value));
       g_object_set_property (G_OBJECT (self->playbin), "volume", value);
       break;
+    case PROP_RATE:
+      g_mutex_lock (&self->lock);
+      self->rate = g_value_get_double (value);
+      GST_DEBUG_OBJECT (self, "Set rate=%lf", g_value_get_double (value));
+      g_mutex_unlock (&self->lock);
+
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_rate_internal, self, NULL);
+      break;
     case PROP_MUTE:
       GST_DEBUG_OBJECT (self, "Set mute=%d", g_value_get_boolean (value));
       g_object_set_property (G_OBJECT (self->playbin), "mute", value);
@@ -556,6 +573,15 @@ gst_player_get_property (GObject * object, guint prop_id,
       GST_TRACE_OBJECT (self, "Returning volume=%lf",
           g_value_get_double (value));
       break;
+    case PROP_RATE: {
+      gdouble rate;
+
+      g_mutex_lock (&self->lock);
+      rate = gst_player_get_rate (self);
+      g_value_set_double (value, rate);
+      g_mutex_unlock (&self->lock);
+      break;
+    }
     case PROP_MUTE:
       g_object_get_property (G_OBJECT (self->playbin), "mute", value);
       GST_TRACE_OBJECT (self, "Returning mute=%d", g_value_get_boolean (value));
@@ -2554,6 +2580,7 @@ gst_player_stop_internal (gpointer user_data)
   }
   self->seek_position = GST_CLOCK_TIME_NONE;
   self->last_seek_time = GST_CLOCK_TIME_NONE;
+  self->rate = 1.0;
   g_mutex_unlock (&self->lock);
 
   return G_SOURCE_REMOVE;
@@ -2579,9 +2606,11 @@ gst_player_stop (GstPlayer * self)
 static void
 gst_player_seek_internal_locked (GstPlayer * self)
 {
-  GstClockTime position;
   gboolean ret;
+  GstClockTime position;
   GstStateChangeReturn state_ret;
+  GstEvent *s_event;
+  GstSeekFlags flags = 0;
 
   if (self->seek_source) {
     g_source_destroy (self->seek_source);
@@ -2611,19 +2640,33 @@ gst_player_seek_internal_locked (GstPlayer * self)
   self->seek_pending = TRUE;
   g_mutex_unlock (&self->lock);
 
-  GST_DEBUG_OBJECT (self, "Seek to %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (position));
-
   remove_tick_source (self);
   self->is_eos = FALSE;
 
-  ret =
-      gst_element_seek_simple (self->playbin, GST_FORMAT_TIME,
-      GST_SEEK_FLAG_FLUSH, position);
+  flags |= GST_SEEK_FLAG_FLUSH;
 
-  if (!ret)
-    emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+  if (self->rate != 1.0) {
+    flags |= GST_SEEK_FLAG_TRICKMODE;
+  }
+
+  if (self->rate >= 0.0) {
+    s_event = gst_event_new_seek (self->rate, GST_FORMAT_TIME, flags,
+      GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_SET, GST_CLOCK_TIME_NONE);
+  } else {
+    s_event = gst_event_new_seek (self->rate, GST_FORMAT_TIME, flags,
+      GST_SEEK_TYPE_SET, G_GINT64_CONSTANT (0), GST_SEEK_TYPE_SET,
+      position);
+  }
+
+  GST_DEBUG_OBJECT (self, "Seek with rate %.2lf to %" GST_TIME_FORMAT,
+      self->rate, GST_TIME_ARGS (position));
+
+  if (s_event) {
+    ret = gst_element_send_event (self->playbin, s_event);
+    if (!ret)
+      emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
             "Failed to seek to %" GST_TIME_FORMAT, GST_TIME_ARGS (position)));
+  }
 
   g_mutex_lock (&self->lock);
 }
@@ -2638,6 +2681,72 @@ gst_player_seek_internal (gpointer user_data)
   g_mutex_unlock (&self->lock);
 
   return G_SOURCE_REMOVE;
+}
+
+static gboolean
+gst_player_set_rate_internal (gpointer user_data)
+{
+  GstPlayer *self = user_data;
+
+  g_mutex_lock (&self->lock);
+
+  if (self->rate == 0.0) {
+    GST_ERROR_OBJECT (self, "invalid playback rate defaulting to 1.0");
+    self->rate = 1.0;
+  }
+
+  self->seek_position = gst_player_get_position (self);
+
+  /* If there is no seek being dispatch to the main context currently do that,
+   * otherwise we just updated the rate so that it will be taken by
+   * the seek handler from the main context instead of the old one.
+   */
+  if (!self->seek_source) {
+    /* If no seek is pending then create new seek source */
+    if (!self->seek_pending) {
+      self->seek_source = g_idle_source_new ();
+      g_source_set_callback (self->seek_source,
+          (GSourceFunc) gst_player_seek_internal, self, NULL);
+      g_source_attach (self->seek_source, self->context);
+    }
+  }
+
+  g_mutex_unlock (&self->lock);
+
+  return G_SOURCE_REMOVE;
+}
+
+/**
+ * gst_player_set_rate:
+ * @player: #GstPlayer instance
+ * @rate: playback rate
+ *
+ * Playback at specified rate
+ */
+void
+gst_player_set_rate (GstPlayer * self, gdouble rate)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  g_mutex_lock (&self->lock);
+  self->rate = rate;
+  g_mutex_unlock (&self->lock);
+
+  gst_player_set_rate_internal (self);
+}
+
+/**
+ * gst_player_get_rate:
+ * @player: #GstPlayer instance
+ *
+ * Returns: current playback rate
+ */
+gdouble
+gst_player_get_rate (GstPlayer * self)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+
+  return self->rate;
 }
 
 /**

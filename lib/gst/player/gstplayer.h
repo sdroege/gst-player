@@ -83,6 +83,9 @@ void         gst_player_stop                          (GstPlayer    * player);
 
 void         gst_player_seek                          (GstPlayer    * player,
                                                        GstClockTime   position);
+void         gst_player_set_rate                      (GstPlayer    * player,
+                                                       gdouble        rate);
+gdouble      gst_player_get_rate                      (GstPlayer    * player);
 
 gboolean     gst_player_get_dispatch_to_main_context  (GstPlayer    * player);
 void         gst_player_set_dispatch_to_main_context  (GstPlayer    * player,
