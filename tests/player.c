@@ -460,7 +460,8 @@ test_audio_info (GstPlayerMediaInfo * media_info)
           "MPEG-1 Layer 3 (MP3)");
       fail_unless_equals_int (gst_player_audio_info_get_sample_rate
           (audio_info), 48000);
-      fail_unless_equals_int (gst_player_audio_info_get_channels (audio_info), 2);
+      fail_unless_equals_int (gst_player_audio_info_get_channels (audio_info),
+          2);
       fail_unless_equals_int (gst_player_audio_info_get_max_bitrate
           (audio_info), 192000);
       fail_unless (gst_player_audio_info_get_language (audio_info) != NULL);
@@ -469,7 +470,8 @@ test_audio_info (GstPlayerMediaInfo * media_info)
           "MPEG-4 AAC");
       fail_unless_equals_int (gst_player_audio_info_get_sample_rate
           (audio_info), 48000);
-      fail_unless_equals_int (gst_player_audio_info_get_channels (audio_info), 6);
+      fail_unless_equals_int (gst_player_audio_info_get_channels (audio_info),
+          6);
       fail_unless (gst_player_audio_info_get_language (audio_info) != NULL);
     }
 
@@ -757,6 +759,131 @@ START_TEST (test_play_stream_selection)
 
 END_TEST;
 
+typedef struct DisableStreamArgs {
+  GstPlayer *player;
+  GMainLoop *loop;
+  gpointer *test_data;
+}DisableStreamArgs;
+
+static gboolean
+enable_stream_test (gpointer user_data)
+{
+  GstPlayerAudioInfo *audio;
+  GstPlayerSubtitleInfo *sub;
+  GstPlayerVideoInfo *video;
+  DisableStreamArgs *args = (DisableStreamArgs *) user_data;
+
+  /* audio should be enabled */
+  audio = gst_player_get_current_audio_track (args->player);
+  fail_unless (audio != NULL);
+  g_object_unref (audio);
+
+  /* subtitle should be enabled */
+  sub = gst_player_get_current_subtitle_track (args->player);
+  fail_unless (sub != NULL);
+  g_object_unref (sub);
+
+  /* video should be enabled */
+  video = gst_player_get_current_video_track (args->player);
+  fail_unless (video != NULL);
+  g_object_unref (video);
+
+  /* we are done with tests */
+  g_main_loop_quit (args->loop);
+
+  return G_SOURCE_REMOVE;
+}
+
+static gboolean
+disable_stream_test (gpointer user_data)
+{
+  GstPlayerAudioInfo *audio;
+  GstPlayerSubtitleInfo *sub;
+  GstPlayerVideoInfo *video;
+  DisableStreamArgs *args = (DisableStreamArgs *) user_data;
+
+  /* audio should be disabled */
+  audio = gst_player_get_current_audio_track (args->player);
+  fail_unless (audio == NULL);
+
+  /* subtitle should be disabled */
+  sub = gst_player_get_current_subtitle_track (args->player);
+  fail_unless (sub == NULL);
+
+  /* video should be disabled */
+  video = gst_player_get_current_video_track (args->player);
+  fail_unless (video == NULL);
+
+  /* lets enable the streams and verify again */
+  gst_player_set_audio_track_enabled (args->player, TRUE);
+  gst_player_set_subtitle_track_enabled (args->player, TRUE);
+  gst_player_set_video_track_enabled (args->player, TRUE);
+
+  /* wait for 4 second and verify that streams are enabled */
+  g_timeout_add_full (G_PRIORITY_DEFAULT, 4000, enable_stream_test,
+      args, (GDestroyNotify) g_free);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+test_play_stream_disable_enable_cb (GstPlayer * player,
+    TestPlayerStateChange change, TestPlayerState * old_state,
+    TestPlayerState * new_state)
+{
+  gint running = GPOINTER_TO_INT (new_state->test_data);
+
+  if (new_state->state == GST_PLAYER_STATE_PLAYING && !running) {
+    DisableStreamArgs *args = g_new0 (DisableStreamArgs, 1);
+
+    /* Disable all the streams */
+    gst_player_set_video_track_enabled (player, FALSE);
+    gst_player_set_audio_track_enabled (player, FALSE);
+    gst_player_set_subtitle_track_enabled (player, FALSE);
+
+    args->player = player;
+    args->loop = new_state->loop;
+    new_state->test_data = GINT_TO_POINTER (running + 1);
+
+    /* wait for 5sec and verify that streams are disabled */
+    g_timeout_add (5000, disable_stream_test, args);
+  }
+  else if (change == STATE_CHANGE_END_OF_STREAM ||
+      change == STATE_CHANGE_ERROR)
+    g_main_loop_quit (new_state->loop);
+}
+
+START_TEST (test_play_stream_disable_enable)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_stream_disable_enable_cb;
+  state.test_data = GINT_TO_POINTER (0);
+
+  player = test_player_new (&state);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/sintel.mkv", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data), 1);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
 START_TEST (test_play_audio_video_eos)
 {
   GstPlayer *player;
@@ -961,6 +1088,7 @@ player_suite (void)
   tcase_add_test (tc_general, test_play_error_invalid_uri_and_play);
   tcase_add_test (tc_general, test_play_media_info);
   tcase_add_test (tc_general, test_play_stream_selection);
+  tcase_add_test (tc_general, test_play_stream_disable_enable);
 
   suite_add_tcase (s, tc_general);
 
