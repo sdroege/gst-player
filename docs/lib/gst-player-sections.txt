@@ -73,6 +73,9 @@ gst_player_has_color_balance
 gst_player_set_color_balance
 gst_player_get_color_balance
 
+gst_player_get_rate
+gst_player_set_rate
+
 <SUBSECTION Standard>
 GST_IS_PLAYER
 GST_IS_PLAYER_CLASS
