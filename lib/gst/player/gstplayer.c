@@ -27,7 +27,6 @@
 
 /* TODO:
  *
- * - Playback rate
  * - Equalizer
  * - Gapless playback
  * - Frame stepping
@@ -573,15 +572,11 @@ gst_player_get_property (GObject * object, guint prop_id,
       GST_TRACE_OBJECT (self, "Returning volume=%lf",
           g_value_get_double (value));
       break;
-    case PROP_RATE: {
-      gdouble rate;
-
+    case PROP_RATE:
       g_mutex_lock (&self->lock);
-      rate = gst_player_get_rate (self);
-      g_value_set_double (value, rate);
+      g_value_set_double (value, gst_player_get_rate (self));
       g_mutex_unlock (&self->lock);
       break;
-    }
     case PROP_MUTE:
       g_object_get_property (G_OBJECT (self->playbin), "mute", value);
       GST_TRACE_OBJECT (self, "Returning mute=%d", g_value_get_boolean (value));
@@ -2608,6 +2603,7 @@ gst_player_seek_internal_locked (GstPlayer * self)
 {
   gboolean ret;
   GstClockTime position;
+  gdouble rate;
   GstStateChangeReturn state_ret;
   GstEvent *s_event;
   GstSeekFlags flags = 0;
@@ -2638,6 +2634,7 @@ gst_player_seek_internal_locked (GstPlayer * self)
   position = self->seek_position;
   self->seek_position = GST_CLOCK_TIME_NONE;
   self->seek_pending = TRUE;
+  rate = self->rate;
   g_mutex_unlock (&self->lock);
 
   remove_tick_source (self);
@@ -2645,28 +2642,25 @@ gst_player_seek_internal_locked (GstPlayer * self)
 
   flags |= GST_SEEK_FLAG_FLUSH;
 
-  if (self->rate != 1.0) {
+  if (rate != 1.0) {
     flags |= GST_SEEK_FLAG_TRICKMODE;
   }
 
-  if (self->rate >= 0.0) {
-    s_event = gst_event_new_seek (self->rate, GST_FORMAT_TIME, flags,
-      GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_SET, GST_CLOCK_TIME_NONE);
+  if (rate >= 0.0) {
+    s_event = gst_event_new_seek (rate, GST_FORMAT_TIME, flags,
+        GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
   } else {
-    s_event = gst_event_new_seek (self->rate, GST_FORMAT_TIME, flags,
-      GST_SEEK_TYPE_SET, G_GINT64_CONSTANT (0), GST_SEEK_TYPE_SET,
-      position);
+    s_event = gst_event_new_seek (rate, GST_FORMAT_TIME, flags,
+        GST_SEEK_TYPE_SET, G_GINT64_CONSTANT (0), GST_SEEK_TYPE_SET, position);
   }
 
   GST_DEBUG_OBJECT (self, "Seek with rate %.2lf to %" GST_TIME_FORMAT,
-      self->rate, GST_TIME_ARGS (position));
+      rate, GST_TIME_ARGS (position));
 
-  if (s_event) {
-    ret = gst_element_send_event (self->playbin, s_event);
-    if (!ret)
-      emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+  ret = gst_element_send_event (self->playbin, s_event);
+  if (!ret)
+    emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
             "Failed to seek to %" GST_TIME_FORMAT, GST_TIME_ARGS (position)));
-  }
 
   g_mutex_lock (&self->lock);
 }
@@ -2689,11 +2683,6 @@ gst_player_set_rate_internal (gpointer user_data)
   GstPlayer *self = user_data;
 
   g_mutex_lock (&self->lock);
-
-  if (self->rate == 0.0) {
-    GST_ERROR_OBJECT (self, "invalid playback rate defaulting to 1.0");
-    self->rate = 1.0;
-  }
 
   self->seek_position = gst_player_get_position (self);
 
@@ -2727,6 +2716,7 @@ void
 gst_player_set_rate (GstPlayer * self, gdouble rate)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
+  g_return_if_fail (rate != 0.0);
 
   g_mutex_lock (&self->lock);
   self->rate = rate;
@@ -2744,7 +2734,7 @@ gst_player_set_rate (GstPlayer * self, gdouble rate)
 gdouble
 gst_player_get_rate (GstPlayer * self)
 {
-  g_return_if_fail (GST_IS_PLAYER (self));
+  g_return_val_if_fail (GST_IS_PLAYER (self), 1.0);
 
   return self->rate;
 }
