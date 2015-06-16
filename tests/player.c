@@ -452,8 +452,8 @@ test_audio_info (GstPlayerMediaInfo * media_info)
 
     fail_unless (gst_player_stream_info_get_tags (stream) != NULL);
     fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
-    fail_unless_equals_string (
-        gst_player_stream_info_get_stream_type (stream), "audio");
+    fail_unless_equals_string (gst_player_stream_info_get_stream_type (stream),
+        "audio");
 
     if (i == 0) {
       fail_unless_equals_string (gst_player_stream_info_get_codec (stream),
@@ -495,7 +495,7 @@ test_video_info (GstPlayerMediaInfo * media_info)
     fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
     fail_unless_equals_int (gst_player_stream_info_get_index (stream), 0);
     fail_unless (strstr (gst_player_stream_info_get_codec (stream),
-        "H.264") != NULL);
+            "H.264") != NULL);
     fail_unless_equals_int (gst_player_video_info_get_width (video_info), 320);
     fail_unless_equals_int (gst_player_video_info_get_height (video_info), 240);
     gst_player_video_info_get_framerate (video_info, &fps_n, &fps_d);
@@ -517,12 +517,12 @@ test_subtitle_info (GstPlayerMediaInfo * media_info)
     GstPlayerStreamInfo *stream = (GstPlayerStreamInfo *) list->data;
     GstPlayerSubtitleInfo *sub = (GstPlayerSubtitleInfo *) stream;
 
-    fail_unless_equals_string (
-        gst_player_stream_info_get_stream_type (stream), "subtitle");
+    fail_unless_equals_string (gst_player_stream_info_get_stream_type (stream),
+        "subtitle");
     fail_unless (gst_player_stream_info_get_tags (stream) != NULL);
     fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
-    fail_unless_equals_string (
-        gst_player_stream_info_get_codec (stream), "Timed Text");
+    fail_unless_equals_string (gst_player_stream_info_get_codec (stream),
+        "Timed Text");
     fail_unless (gst_player_subtitle_info_get_language (sub) != NULL);
   }
 }
@@ -535,12 +535,13 @@ test_media_info_object (GstPlayer * player, GstPlayerMediaInfo * media_info)
   /* gloabl tag */
   fail_unless (gst_player_media_info_is_seekable (media_info) == TRUE);
   fail_unless (gst_player_media_info_get_tags (media_info) != NULL);
-  fail_unless_equals_string (
-      gst_player_media_info_get_title (media_info), "Sintel");
-  fail_unless_equals_string (
-      gst_player_media_info_get_container_format (media_info), "Matroska");
+  fail_unless_equals_string (gst_player_media_info_get_title (media_info),
+      "Sintel");
+  fail_unless_equals_string (gst_player_media_info_get_container_format
+      (media_info), "Matroska");
   fail_unless (gst_player_media_info_get_image_sample (media_info) == NULL);
-  fail_unless( strstr (gst_player_media_info_get_uri (media_info), "sintel.mkv") != NULL);
+  fail_unless (strstr (gst_player_media_info_get_uri (media_info),
+          "sintel.mkv") != NULL);
 
   /* number of streams */
   list = gst_player_media_info_get_stream_list (media_info);
@@ -615,12 +616,13 @@ START_TEST (test_play_media_info)
 
 END_TEST;
 
-typedef struct SwitchStreamArgs {
+typedef struct SwitchStreamArgs
+{
   gint index;
   GstPlayer *player;
   GMainLoop *loop;
   gpointer *test_data;
-}SwitchStreamArgs;
+} SwitchStreamArgs;
 
 static gboolean
 switch_audio_stream (gpointer user_data)
@@ -629,14 +631,12 @@ switch_audio_stream (gpointer user_data)
   SwitchStreamArgs *args = (SwitchStreamArgs *) user_data;
   gint step = GPOINTER_TO_INT (*args->test_data);
 
-  fail_unless (gst_player_set_audio_track
-                (args->player, args->index) == TRUE);
+  fail_unless (gst_player_set_audio_track (args->player, args->index) == TRUE);
   new_stream = (GstPlayerStreamInfo *)
-                gst_player_get_current_audio_track (args->player);
+      gst_player_get_current_audio_track (args->player);
 
-  fail_unless_equals_int (
-                gst_player_stream_info_get_index (new_stream),
-                args->index);
+  fail_unless_equals_int (gst_player_stream_info_get_index (new_stream),
+      args->index);
 
   *(args->test_data) = GINT_TO_POINTER (step + 1);
   return G_SOURCE_REMOVE;
@@ -650,12 +650,11 @@ switch_subtitle_stream (gpointer user_data)
   gint step = GPOINTER_TO_INT (*(args->test_data));
 
   fail_unless (gst_player_set_subtitle_track
-                (args->player, args->index) == TRUE);
+      (args->player, args->index) == TRUE);
   new_stream = (GstPlayerStreamInfo *)
-                gst_player_get_current_subtitle_track (args->player);
-  fail_unless_equals_int (
-                gst_player_stream_info_get_index (new_stream),
-                args->index);
+      gst_player_get_current_subtitle_track (args->player);
+  fail_unless_equals_int (gst_player_stream_info_get_index (new_stream),
+      args->index);
 
   *(args->test_data) = GINT_TO_POINTER (step + 1);
   return G_SOURCE_REMOVE;
@@ -677,7 +676,7 @@ switch_streams (GList * list, SwitchStreamArgs * args)
     if (!strcmp (gst_player_stream_info_get_stream_type (stream), "audio"))
       g_timeout_add (3000 * i, switch_audio_stream, args);
     else if (!strcmp (gst_player_stream_info_get_stream_type
-          (stream), "subtitle"))
+            (stream), "subtitle"))
       g_timeout_add (3000 * i, switch_subtitle_stream, args);
     i++;
   }
@@ -759,11 +758,12 @@ START_TEST (test_play_stream_selection)
 
 END_TEST;
 
-typedef struct DisableStreamArgs {
+typedef struct DisableStreamArgs
+{
   GstPlayer *player;
   GMainLoop *loop;
   gpointer *test_data;
-}DisableStreamArgs;
+} DisableStreamArgs;
 
 static gboolean
 enable_stream_test (gpointer user_data)
@@ -847,8 +847,7 @@ test_play_stream_disable_enable_cb (GstPlayer * player,
 
     /* wait for 5sec and verify that streams are disabled */
     g_timeout_add (5000, disable_stream_test, args);
-  }
-  else if (change == STATE_CHANGE_END_OF_STREAM ||
+  } else if (change == STATE_CHANGE_END_OF_STREAM ||
       change == STATE_CHANGE_ERROR)
     g_main_loop_quit (new_state->loop);
 }
