@@ -101,6 +101,7 @@ typedef enum
   STATE_CHANGE_DURATION_CHANGED,
   STATE_CHANGE_END_OF_STREAM,
   STATE_CHANGE_ERROR,
+  STATE_CHANGE_WARNING,
   STATE_CHANGE_POSITION_UPDATED,
   STATE_CHANGE_STATE_CHANGED,
   STATE_CHANGE_VIDEO_DIMENSIONS_CHANGED,
@@ -140,7 +141,7 @@ struct _TestPlayerState
 
   gint buffering_percent;
   guint64 position, duration;
-  gboolean end_of_stream, error;
+  gboolean end_of_stream, error, warning;
   GstPlayerState state;
   gint width, height;
   GstPlayerMediaInfo *media_info;
@@ -234,6 +235,17 @@ error_cb (GstPlayer * player, GError * error, TestPlayerState * state)
 }
 
 static void
+warning_cb (GstPlayer * player, GError * error, TestPlayerState * state)
+{
+  TestPlayerState old_state = *state;
+
+  state->warning = TRUE;
+  test_player_state_change_debug (player, STATE_CHANGE_WARNING, &old_state,
+      state);
+  state->test_callback (player, STATE_CHANGE_WARNING, &old_state, state);
+}
+
+static void
 position_updated_cb (GstPlayer * player, guint64 position,
     TestPlayerState * state)
 {
@@ -317,6 +329,7 @@ test_player_new (TestPlayerState * state)
   g_signal_connect (player, "end-of-stream", G_CALLBACK (end_of_stream_cb),
       state);
   g_signal_connect (player, "error", G_CALLBACK (error_cb), state);
+  g_signal_connect (player, "warning", G_CALLBACK (warning_cb), state);
   g_signal_connect (player, "position-updated",
       G_CALLBACK (position_updated_cb), state);
   g_signal_connect (player, "state-changed", G_CALLBACK (state_changed_cb),
@@ -883,6 +896,142 @@ START_TEST (test_play_stream_disable_enable)
 
 END_TEST;
 
+static void
+test_play_error_invalid_external_suburi_cb (GstPlayer * player,
+    TestPlayerStateChange change, TestPlayerState * old_state,
+    TestPlayerState * new_state)
+{
+  gint steps = GPOINTER_TO_INT (new_state->test_data);
+
+  if (new_state->state == GST_PLAYER_STATE_PLAYING && !steps) {
+    gchar *suburi;
+
+    suburi = gst_filename_to_uri (TEST_PATH "/foo.srt", NULL);
+    fail_unless (suburi != NULL);
+
+    new_state->test_data = GINT_TO_POINTER (steps + 1);
+    /* load invalid suburi */
+    fail_unless (gst_player_set_subtitle_uri (player, suburi) != FALSE);
+    g_free (suburi);
+
+  } else if (steps && change == STATE_CHANGE_WARNING) {
+    new_state->test_data = GINT_TO_POINTER (steps + 1);
+    g_main_loop_quit (new_state->loop);
+
+  } else if (change == STATE_CHANGE_END_OF_STREAM ||
+      change == STATE_CHANGE_ERROR)
+    g_main_loop_quit (new_state->loop);
+}
+
+START_TEST (test_play_error_invalid_external_suburi)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_error_invalid_external_suburi_cb;
+  state.test_data = GINT_TO_POINTER (0);
+
+  player = test_player_new (&state);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/audio-video.ogg", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data), 2);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
+static gboolean
+has_subtitle_stream (TestPlayerState * new_state)
+{
+  if (gst_player_get_subtitle_streams (new_state->media_info))
+    return TRUE;
+
+  return FALSE;
+}
+
+static void
+test_play_external_suburi_cb (GstPlayer * player,
+    TestPlayerStateChange change, TestPlayerState * old_state,
+    TestPlayerState * new_state)
+{
+  gint steps = GPOINTER_TO_INT (new_state->test_data);
+
+  if (new_state->state == GST_PLAYER_STATE_PLAYING && !steps) {
+    gchar *suburi;
+
+    suburi = gst_filename_to_uri (TEST_PATH "/test_sub.srt", NULL);
+    fail_unless (suburi != NULL);
+
+    fail_unless (gst_player_set_subtitle_uri (player, suburi) != FALSE);
+    g_free (suburi);
+    new_state->test_data = GINT_TO_POINTER (steps + 1);
+
+  } else if (change == STATE_CHANGE_MEDIA_INFO_UPDATED &&
+      has_subtitle_stream (new_state)) {
+    gchar *current_suburi, *suburi;
+
+    current_suburi = gst_player_get_subtitle_uri (player);
+    fail_unless (current_suburi != NULL);
+    suburi = gst_filename_to_uri (TEST_PATH "/test_sub.srt", NULL);
+    fail_unless (suburi != NULL);
+
+    fail_unless_equals_int (g_strcmp0 (current_suburi, suburi), 0);
+
+    g_free (current_suburi);
+    g_free (suburi);
+    new_state->test_data = GINT_TO_POINTER (steps + 1);
+    g_main_loop_quit (new_state->loop);
+
+  } else if (change == STATE_CHANGE_END_OF_STREAM ||
+      change == STATE_CHANGE_ERROR)
+    g_main_loop_quit (new_state->loop);
+}
+
+START_TEST (test_play_external_suburi)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_external_suburi_cb;
+  state.test_data = GINT_TO_POINTER (0);
+
+  player = test_player_new (&state);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/audio-video.ogg", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data), 2);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
 START_TEST (test_play_audio_video_eos)
 {
   GstPlayer *player;
@@ -1088,6 +1237,8 @@ player_suite (void)
   tcase_add_test (tc_general, test_play_media_info);
   tcase_add_test (tc_general, test_play_stream_selection);
   tcase_add_test (tc_general, test_play_stream_disable_enable);
+  tcase_add_test (tc_general, test_play_error_invalid_external_suburi);
+  tcase_add_test (tc_general, test_play_external_suburi);
 
   suite_add_tcase (s, tc_general);
 
