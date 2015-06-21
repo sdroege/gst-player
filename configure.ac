@@ -67,7 +67,7 @@ PKG_CHECK_MODULES(GTK_X11, [gtk+-x11-3.0 x11], [have_gtk_x11="yes"], [have_gtk_x
 AM_CONDITIONAL(HAVE_GTK_X11, test "x$have_gtk_x11" != "xno")
 
 GOBJECT_INTROSPECTION_CHECK([1.31.1])
-GTK_DOC_CHECK([1.12])
+GTK_DOC_CHECK([1.16], [--flavour no-tmpl])
 
 PKG_CHECK_MODULES(CHECK, check, have_check="yes", have_check="no")
 AC_SUBST(CHECK_CFLAGS)
