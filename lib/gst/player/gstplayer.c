@@ -91,6 +91,7 @@ enum
   SIGNAL_BUFFERING,
   SIGNAL_END_OF_STREAM,
   SIGNAL_ERROR,
+  SIGNAL_WARNING,
   SIGNAL_VIDEO_DIMENSIONS_CHANGED,
   SIGNAL_MEDIA_INFO_UPDATED,
   SIGNAL_VOLUME_CHANGED,
@@ -347,6 +348,11 @@ gst_player_class_init (GstPlayerClass * klass)
       g_signal_new ("mute-changed", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 0, G_TYPE_INVALID);
+
+  signals[SIGNAL_WARNING] =
+      g_signal_new ("warning", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 1, G_TYPE_ERROR);
 }
 
 static void
@@ -869,6 +875,53 @@ dump_dot_file (GstPlayer * self, const gchar * name)
   g_free (full_name);
 }
 
+typedef struct
+{
+  GstPlayer *player;
+  GError *err;
+} WarningSignalData;
+
+static gboolean
+warning_dispatch (gpointer user_data)
+{
+  WarningSignalData *data = user_data;
+
+  g_signal_emit (data->player, signals[SIGNAL_WARNING], 0, data->err);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+free_warning_signal_data (WarningSignalData * data)
+{
+  g_object_unref (data->player);
+  g_clear_error (&data->err);
+  g_free (data);
+}
+
+static void
+emit_warning (GstPlayer * self, GError * err)
+{
+  GST_ERROR_OBJECT (self, "Warning: %s (%s, %d)", err->message,
+      g_quark_to_string (err->domain), err->code);
+
+  if (self->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_WARNING], 0, NULL, NULL, NULL) != 0) {
+    WarningSignalData *data = g_new (WarningSignalData, 1);
+
+    data->player = g_object_ref (self);
+    data->err = g_error_copy (err);
+    g_main_context_invoke_full (self->application_context,
+        G_PRIORITY_DEFAULT, warning_dispatch, data,
+        (GDestroyNotify) free_warning_signal_data);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_WARNING], 0, err);
+  }
+
+  g_error_free (err);
+}
+
 static void
 error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
@@ -912,7 +965,7 @@ static void
 warning_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
-  GError *err;
+  GError *err, *player_err;
   gchar *name, *debug, *message, *full_message;
 
   dump_dot_file (self, "warning");
@@ -935,6 +988,11 @@ warning_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       err->message);
   if (debug != NULL)
     GST_WARNING_OBJECT (self, "Additional debug info:\n%s\n", debug);
+
+  player_err =
+      g_error_new_literal (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
+      full_message);
+  emit_warning (self, player_err);
 
   g_clear_error (&err);
   g_free (debug);
