@@ -27,13 +27,11 @@
 
 /* TODO:
  *
- * - Playback rate
- * - volume/mute change notification
  * - Equalizer
  * - Gapless playback
  * - Frame stepping
  * - Subtitle font, connection speed
- * - Color balance, deinterlacing
+ * - Deinterlacing
  * - Buffering control (-> progressive downloading)
  * - Playlist/queue object
  * - Custom video sink (e.g. embed in GL scene)
@@ -45,6 +43,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <gst/video/colorbalance.h>
 #include <gst/tag/tag.h>
 #include <gst/pbutils/descriptions.h>
 
@@ -78,6 +77,7 @@ enum
   PROP_CURRENT_SUBTITLE_TRACK,
   PROP_VOLUME,
   PROP_MUTE,
+  PROP_RATE,
   PROP_WINDOW_HANDLE,
   PROP_PIPELINE,
   PROP_LAST
@@ -93,6 +93,8 @@ enum
   SIGNAL_ERROR,
   SIGNAL_VIDEO_DIMENSIONS_CHANGED,
   SIGNAL_MEDIA_INFO_UPDATED,
+  SIGNAL_VOLUME_CHANGED,
+  SIGNAL_MUTE_CHANGED,
   SIGNAL_LAST
 };
 
@@ -127,6 +129,8 @@ struct _GstPlayer
   GstState target_state, current_state;
   gboolean is_live, is_eos;
   GSource *tick_source, *ready_timeout_source;
+
+  gdouble rate;
 
   GstPlayerState app_state;
   gint buffering;
@@ -170,6 +174,7 @@ static void gst_player_seek_internal_locked (GstPlayer * self);
 static gboolean gst_player_stop_internal (gpointer user_data);
 static gboolean gst_player_pause_internal (gpointer user_data);
 static gboolean gst_player_play_internal (gpointer user_data);
+static gboolean gst_player_set_rate_internal (gpointer user_data);
 static void change_state (GstPlayer * self, GstPlayerState state);
 
 static GstPlayerMediaInfo *gst_player_media_info_create (GstPlayer * self);
@@ -287,6 +292,10 @@ gst_player_class_init (GstPlayerClass * klass)
       "GStreamer pipeline that is used",
       GST_TYPE_ELEMENT, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
+  param_specs[PROP_RATE] =
+      g_param_spec_double ("rate", "rate", "Playback rate",
+      -64.0, 64.0, 1.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (gobject_class, PROP_LAST, param_specs);
 
   signals[SIGNAL_POSITION_UPDATED] =
@@ -328,6 +337,16 @@ gst_player_class_init (GstPlayerClass * klass)
       g_signal_new ("media-info-updated", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_PLAYER_MEDIA_INFO);
+
+  signals[SIGNAL_VOLUME_CHANGED] =
+      g_signal_new ("volume-changed", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 0, G_TYPE_INVALID);
+
+  signals[SIGNAL_MUTE_CHANGED] =
+      g_signal_new ("mute-changed", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 0, G_TYPE_INVALID);
 }
 
 static void
@@ -434,7 +453,8 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set uri=%s", self->uri);
       g_mutex_unlock (&self->lock);
 
-      g_main_context_invoke (self->context, gst_player_set_uri_internal, self);
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_uri_internal, self, NULL);
       break;
     }
     case PROP_SUBURI:{
@@ -446,13 +466,22 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set suburi=%s", self->suburi);
       g_mutex_unlock (&self->lock);
 
-      g_main_context_invoke (self->context, gst_player_set_suburi_internal,
-          self);
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_suburi_internal, self, NULL);
       break;
     }
     case PROP_VOLUME:
       GST_DEBUG_OBJECT (self, "Set volume=%lf", g_value_get_double (value));
       g_object_set_property (G_OBJECT (self->playbin), "volume", value);
+      break;
+    case PROP_RATE:
+      g_mutex_lock (&self->lock);
+      self->rate = g_value_get_double (value);
+      GST_DEBUG_OBJECT (self, "Set rate=%lf", g_value_get_double (value));
+      g_mutex_unlock (&self->lock);
+
+      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+          gst_player_set_rate_internal, self, NULL);
       break;
     case PROP_MUTE:
       GST_DEBUG_OBJECT (self, "Set mute=%d", g_value_get_boolean (value));
@@ -543,6 +572,11 @@ gst_player_get_property (GObject * object, guint prop_id,
       GST_TRACE_OBJECT (self, "Returning volume=%lf",
           g_value_get_double (value));
       break;
+    case PROP_RATE:
+      g_mutex_lock (&self->lock);
+      g_value_set_double (value, gst_player_get_rate (self));
+      g_mutex_unlock (&self->lock);
+      break;
     case PROP_MUTE:
       g_object_get_property (G_OBJECT (self->playbin), "mute", value);
       GST_TRACE_OBJECT (self, "Returning mute=%d", g_value_get_boolean (value));
@@ -592,6 +626,13 @@ state_changed_dispatch (gpointer user_data)
 }
 
 static void
+state_changed_signal_data_free (StateChangedSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
+}
+
+static void
 change_state (GstPlayer * self, GstPlayerState state)
 {
   if (state == self->app_state)
@@ -607,11 +648,11 @@ change_state (GstPlayer * self, GstPlayerState state)
           signals[SIGNAL_STATE_CHANGED], 0, NULL, NULL, NULL) != 0) {
     StateChangedSignalData *data = g_new (StateChangedSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->state = state;
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, state_changed_dispatch, data,
-        (GDestroyNotify) g_free);
+        (GDestroyNotify) state_changed_signal_data_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_STATE_CHANGED], 0, state);
   }
@@ -628,12 +669,21 @@ position_updated_dispatch (gpointer user_data)
 {
   PositionUpdatedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_POSITION_UPDATED], 0,
-      data->position);
-  g_object_notify_by_pspec (G_OBJECT (data->player),
-      param_specs[PROP_POSITION]);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_POSITION_UPDATED], 0,
+        data->position);
+    g_object_notify_by_pspec (G_OBJECT (data->player),
+        param_specs[PROP_POSITION]);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+position_updated_signal_data_free (PositionUpdatedSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static gboolean
@@ -642,7 +692,9 @@ tick_cb (gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint64 position;
 
-  if (gst_element_query_position (self->playbin, GST_FORMAT_TIME, &position)) {
+  if (self->target_state >= GST_STATE_PAUSED
+      && gst_element_query_position (self->playbin, GST_FORMAT_TIME,
+          &position)) {
     GST_LOG_OBJECT (self, "Position %" GST_TIME_FORMAT,
         GST_TIME_ARGS (position));
 
@@ -651,11 +703,11 @@ tick_cb (gpointer user_data)
             signals[SIGNAL_POSITION_UPDATED], 0, NULL, NULL, NULL) != 0) {
       PositionUpdatedSignalData *data = g_new (PositionUpdatedSignalData, 1);
 
-      data->player = self;
+      data->player = g_object_ref (self);
       data->position = position;
       g_main_context_invoke_full (self->application_context,
           G_PRIORITY_DEFAULT, position_updated_dispatch, data,
-          (GDestroyNotify) g_free);
+          (GDestroyNotify) position_updated_signal_data_free);
     } else {
       g_signal_emit (self, signals[SIGNAL_POSITION_UPDATED], 0, position);
       g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_POSITION]);
@@ -744,6 +796,7 @@ error_dispatch (gpointer user_data)
 static void
 free_error_signal_data (ErrorSignalData * data)
 {
+  g_object_unref (data->player);
   g_clear_error (&data->err);
   g_free (data);
 }
@@ -759,7 +812,7 @@ emit_error (GstPlayer * self, GError * err)
           signals[SIGNAL_ERROR], 0, NULL, NULL, NULL) != 0) {
     ErrorSignalData *data = g_new (ErrorSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->err = g_error_copy (err);
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, error_dispatch, data,
@@ -911,7 +964,8 @@ eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   if (self->dispatch_to_main_context
       && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_END_OF_STREAM], 0, NULL, NULL, NULL) != 0) {
-    g_main_context_invoke (self->application_context, eos_dispatch, self);
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        eos_dispatch, g_object_ref (self), (GDestroyNotify) g_object_unref);
   } else {
     g_signal_emit (self, signals[SIGNAL_END_OF_STREAM], 0);
   }
@@ -931,9 +985,18 @@ buffering_dispatch (gpointer user_data)
 {
   BufferingSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_BUFFERING], 0, data->percent);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_BUFFERING], 0, data->percent);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+buffering_signal_data_free (BufferingSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static void
@@ -942,6 +1005,8 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
   GstPlayer *self = GST_PLAYER (user_data);
   gint percent;
 
+  if (self->target_state < GST_STATE_PAUSED)
+    return;
   if (self->is_live)
     return;
 
@@ -969,11 +1034,11 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
             signals[SIGNAL_BUFFERING], 0, NULL, NULL, NULL) != 0) {
       BufferingSignalData *data = g_new (BufferingSignalData, 1);
 
-      data->player = self;
+      data->player = g_object_ref (self);
       data->percent = percent;
       g_main_context_invoke_full (self->application_context,
           G_PRIORITY_DEFAULT, buffering_dispatch, data,
-          (GDestroyNotify) g_free);
+          (GDestroyNotify) buffering_signal_data_free);
     } else {
       g_signal_emit (self, signals[SIGNAL_BUFFERING], 0, percent);
     }
@@ -1039,10 +1104,20 @@ video_dimensions_changed_dispatch (gpointer user_data)
 {
   VideoDimensionsChangedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
-      data->width, data->height);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
+        data->width, data->height);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+video_dimensions_changed_signal_data_free (VideoDimensionsChangedSignalData *
+    data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static void
@@ -1088,12 +1163,12 @@ out:
     VideoDimensionsChangedSignalData *data =
         g_new (VideoDimensionsChangedSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->width = width;
     data->height = height;
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, video_dimensions_changed_dispatch, data,
-        (GDestroyNotify) g_free);
+        (GDestroyNotify) video_dimensions_changed_signal_data_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_VIDEO_DIMENSIONS_CHANGED], 0,
         width, height);
@@ -1119,12 +1194,21 @@ duration_changed_dispatch (gpointer user_data)
 {
   DurationChangedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_DURATION_CHANGED], 0,
-      data->duration);
-  g_object_notify_by_pspec (G_OBJECT (data->player),
-      param_specs[PROP_DURATION]);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_DURATION_CHANGED], 0,
+        data->duration);
+    g_object_notify_by_pspec (G_OBJECT (data->player),
+        param_specs[PROP_DURATION]);
+  }
 
   return G_SOURCE_REMOVE;
+}
+
+static void
+duration_changed_signal_data_free (DurationChangedSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
 }
 
 static void
@@ -1138,11 +1222,11 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
           signals[SIGNAL_DURATION_CHANGED], 0, NULL, NULL, NULL) != 0) {
     DurationChangedSignalData *data = g_new (DurationChangedSignalData, 1);
 
-    data->player = self;
+    data->player = g_object_ref (self);
     data->duration = duration;
     g_main_context_invoke_full (self->application_context,
         G_PRIORITY_DEFAULT, duration_changed_dispatch, data,
-        (GDestroyNotify) g_free);
+        (GDestroyNotify) duration_changed_signal_data_free);
   } else {
     g_signal_emit (self, signals[SIGNAL_DURATION_CHANGED], 0, duration);
     g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_DURATION]);
@@ -1465,8 +1549,10 @@ media_info_updated_dispatch (gpointer user_data)
 {
   MediaInfoUpdatedSignalData *data = user_data;
 
-  g_signal_emit (data->player, signals[SIGNAL_MEDIA_INFO_UPDATED], 0,
-      data->info);
+  if (data->player->target_state >= GST_STATE_PAUSED) {
+    g_signal_emit (data->player, signals[SIGNAL_MEDIA_INFO_UPDATED], 0,
+        data->info);
+  }
 
   return FALSE;
 }
@@ -1474,6 +1560,7 @@ media_info_updated_dispatch (gpointer user_data)
 static void
 free_media_info_updated_signal_data (MediaInfoUpdatedSignalData * data)
 {
+  g_object_unref (data->player);
   g_object_unref (data->info);
   g_free (data);
 }
@@ -1490,7 +1577,7 @@ emit_media_info_updated_signal (GstPlayer * self)
 {
   if (self->dispatch_to_main_context) {
     MediaInfoUpdatedSignalData *data = g_new (MediaInfoUpdatedSignalData, 1);
-    data->player = self;
+    data->player = g_object_ref (self);
     g_mutex_lock (&self->lock);
     data->info = gst_player_media_info_copy (self->media_info);
     g_mutex_unlock (&self->lock);
@@ -2118,6 +2205,54 @@ subtitle_tags_changed_cb (GstElement * playbin, gint stream_index,
       GST_TYPE_PLAYER_SUBTITLE_INFO);
 }
 
+static gboolean
+volume_changed_dispatch (gpointer user_data)
+{
+  g_signal_emit (user_data, signals[SIGNAL_VOLUME_CHANGED], 0);
+  g_object_notify_by_pspec (G_OBJECT (user_data), param_specs[PROP_VOLUME]);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void inline
+volume_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
+{
+  if (self->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_VOLUME_CHANGED], 0, NULL, NULL, NULL) != 0) {
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        volume_changed_dispatch, g_object_ref (self),
+        (GDestroyNotify) g_object_unref);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_VOLUME_CHANGED], 0);
+    g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_VOLUME]);
+  }
+}
+
+static gboolean
+mute_changed_dispatch (gpointer user_data)
+{
+  g_signal_emit (user_data, signals[SIGNAL_MUTE_CHANGED], 0);
+  g_object_notify_by_pspec (G_OBJECT (user_data), param_specs[PROP_MUTE]);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void inline
+mute_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
+{
+  if (self->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_MUTE_CHANGED], 0, NULL, NULL, NULL) != 0) {
+    g_main_context_invoke_full (self->application_context, G_PRIORITY_DEFAULT,
+        mute_changed_dispatch, g_object_ref (self),
+        (GDestroyNotify) g_object_unref);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_MUTE_CHANGED], 0);
+    g_object_notify_by_pspec (G_OBJECT (self), param_specs[PROP_MUTE]);
+  }
+}
+
 static gpointer
 gst_player_main (gpointer data)
 {
@@ -2181,6 +2316,10 @@ gst_player_main (gpointer data)
       G_CALLBACK (audio_tags_changed_cb), self);
   g_signal_connect (self->playbin, "text-tags-changed",
       G_CALLBACK (subtitle_tags_changed_cb), self);
+  g_signal_connect (self->playbin, "notify::volume",
+      G_CALLBACK (volume_notify_cb), self);
+  g_signal_connect (self->playbin, "notify::mute",
+      G_CALLBACK (mute_notify_cb), self);
 
   self->target_state = GST_STATE_NULL;
   self->current_state = GST_STATE_NULL;
@@ -2242,6 +2381,11 @@ gst_player_init_once (gpointer user_data)
   return NULL;
 }
 
+/**
+ * gst_player_new:
+ *
+ * Returns: a new #GstPlayer instance
+ */
 GstPlayer *
 gst_player_new (void)
 {
@@ -2303,7 +2447,7 @@ gst_player_play_internal (gpointer user_data)
         GST_SEEK_FLAG_FLUSH, 0);
     if (!ret) {
       GST_ERROR_OBJECT (self, "Seek to beginning failed");
-      gst_element_set_state (self->playbin, GST_STATE_READY);
+      gst_player_stop_internal (self);
       gst_player_play_internal (self);
     }
   }
@@ -2311,12 +2455,19 @@ gst_player_play_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_play:
+ * @player: #GstPlayer instance
+ *
+ * Request to play the loaded stream.
+ */
 void
 gst_player_play (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_play_internal, self);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_play_internal, self, NULL);
 }
 
 static gboolean
@@ -2363,7 +2514,7 @@ gst_player_pause_internal (gpointer user_data)
         GST_SEEK_FLAG_FLUSH, 0);
     if (!ret) {
       GST_ERROR_OBJECT (self, "Seek to beginning failed");
-      gst_element_set_state (self->playbin, GST_STATE_READY);
+      gst_player_stop_internal (self);
       gst_player_pause_internal (self);
     }
   }
@@ -2371,12 +2522,19 @@ gst_player_pause_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_pause:
+ * @player: #GstPlayer instance
+ *
+ * Pauses the current stream.
+ */
 void
 gst_player_pause (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_pause_internal, self);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_pause_internal, self, NULL);
 }
 
 static gboolean
@@ -2417,26 +2575,38 @@ gst_player_stop_internal (gpointer user_data)
   }
   self->seek_position = GST_CLOCK_TIME_NONE;
   self->last_seek_time = GST_CLOCK_TIME_NONE;
+  self->rate = 1.0;
   g_mutex_unlock (&self->lock);
 
   return G_SOURCE_REMOVE;
 }
 
+/**
+ * gst_player_stop:
+ * @player: #GstPlayer instance
+ *
+ * Stops playing the current stream and resets to the first position
+ * in the stream.
+ */
 void
 gst_player_stop (GstPlayer * self)
 {
   g_return_if_fail (GST_IS_PLAYER (self));
 
-  g_main_context_invoke (self->context, gst_player_stop_internal, self);
+  g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
+      gst_player_stop_internal, self, NULL);
 }
 
 /* Must be called with lock from main context, releases lock! */
 static void
 gst_player_seek_internal_locked (GstPlayer * self)
 {
-  GstClockTime position;
   gboolean ret;
+  GstClockTime position;
+  gdouble rate;
   GstStateChangeReturn state_ret;
+  GstEvent *s_event;
+  GstSeekFlags flags = 0;
 
   if (self->seek_source) {
     g_source_destroy (self->seek_source);
@@ -2464,18 +2634,30 @@ gst_player_seek_internal_locked (GstPlayer * self)
   position = self->seek_position;
   self->seek_position = GST_CLOCK_TIME_NONE;
   self->seek_pending = TRUE;
+  rate = self->rate;
   g_mutex_unlock (&self->lock);
-
-  GST_DEBUG_OBJECT (self, "Seek to %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (position));
 
   remove_tick_source (self);
   self->is_eos = FALSE;
 
-  ret =
-      gst_element_seek_simple (self->playbin, GST_FORMAT_TIME,
-      GST_SEEK_FLAG_FLUSH, position);
+  flags |= GST_SEEK_FLAG_FLUSH;
 
+  if (rate != 1.0) {
+    flags |= GST_SEEK_FLAG_TRICKMODE;
+  }
+
+  if (rate >= 0.0) {
+    s_event = gst_event_new_seek (rate, GST_FORMAT_TIME, flags,
+        GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE);
+  } else {
+    s_event = gst_event_new_seek (rate, GST_FORMAT_TIME, flags,
+        GST_SEEK_TYPE_SET, G_GINT64_CONSTANT (0), GST_SEEK_TYPE_SET, position);
+  }
+
+  GST_DEBUG_OBJECT (self, "Seek with rate %.2lf to %" GST_TIME_FORMAT,
+      rate, GST_TIME_ARGS (position));
+
+  ret = gst_element_send_event (self->playbin, s_event);
   if (!ret)
     emit_error (self, g_error_new (GST_PLAYER_ERROR, GST_PLAYER_ERROR_FAILED,
             "Failed to seek to %" GST_TIME_FORMAT, GST_TIME_ARGS (position)));
@@ -2495,6 +2677,76 @@ gst_player_seek_internal (gpointer user_data)
   return G_SOURCE_REMOVE;
 }
 
+static gboolean
+gst_player_set_rate_internal (gpointer user_data)
+{
+  GstPlayer *self = user_data;
+
+  g_mutex_lock (&self->lock);
+
+  self->seek_position = gst_player_get_position (self);
+
+  /* If there is no seek being dispatch to the main context currently do that,
+   * otherwise we just updated the rate so that it will be taken by
+   * the seek handler from the main context instead of the old one.
+   */
+  if (!self->seek_source) {
+    /* If no seek is pending then create new seek source */
+    if (!self->seek_pending) {
+      self->seek_source = g_idle_source_new ();
+      g_source_set_callback (self->seek_source,
+          (GSourceFunc) gst_player_seek_internal, self, NULL);
+      g_source_attach (self->seek_source, self->context);
+    }
+  }
+
+  g_mutex_unlock (&self->lock);
+
+  return G_SOURCE_REMOVE;
+}
+
+/**
+ * gst_player_set_rate:
+ * @player: #GstPlayer instance
+ * @rate: playback rate
+ *
+ * Playback at specified rate
+ */
+void
+gst_player_set_rate (GstPlayer * self, gdouble rate)
+{
+  g_return_if_fail (GST_IS_PLAYER (self));
+  g_return_if_fail (rate != 0.0);
+
+  g_mutex_lock (&self->lock);
+  self->rate = rate;
+  g_mutex_unlock (&self->lock);
+
+  gst_player_set_rate_internal (self);
+}
+
+/**
+ * gst_player_get_rate:
+ * @player: #GstPlayer instance
+ *
+ * Returns: current playback rate
+ */
+gdouble
+gst_player_get_rate (GstPlayer * self)
+{
+  g_return_val_if_fail (GST_IS_PLAYER (self), 1.0);
+
+  return self->rate;
+}
+
+/**
+ * gst_player_seek:
+ * @player: #GstPlayer instance
+ * @position: position to seek in nanoseconds
+ *
+ * Seeks the currently-playing stream to the absolute @position time
+ * in nanoseconds.
+ */
 void
 gst_player_seek (GstPlayer * self, GstClockTime position)
 {
@@ -2544,6 +2796,13 @@ gst_player_seek (GstPlayer * self, GstClockTime position)
   g_mutex_unlock (&self->lock);
 }
 
+/**
+ * gst_player_get_dispatch_to_main_context:
+ * @player: #GstPlayer instance
+ *
+ * Returns: %TRUE if the callbacks are dispatched in the thread's
+ * default main context. Otherwise, %FALSE.
+ */
 gboolean
 gst_player_get_dispatch_to_main_context (GstPlayer * self)
 {
@@ -2556,6 +2815,15 @@ gst_player_get_dispatch_to_main_context (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_dispatch_to_main_context:
+ * @player: #GstPlayer instance
+ * @val: whether the callbacks are dispatched in the thread's default
+ * main context
+ *
+ * Sets whether the callbacks are dispatched in the thread's default
+ * main context.
+ */
 void
 gst_player_set_dispatch_to_main_context (GstPlayer * self, gboolean val)
 {
@@ -2564,6 +2832,15 @@ gst_player_set_dispatch_to_main_context (GstPlayer * self, gboolean val)
   g_object_set (self, "dispatch-to-main-context", val, NULL);
 }
 
+/**
+ * gst_player_get_uri:
+ * @player: #GstPlayer instance
+ *
+ * Gets the URI of the currently-playing stream.
+ *
+ * Returns: (transfer full): a string containing the URI of the
+ * currently-playing stream. g_free() after usage.
+ */
 gchar *
 gst_player_get_uri (GstPlayer * self)
 {
@@ -2576,6 +2853,13 @@ gst_player_get_uri (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_uri:
+ * @player: #GstPlayer instance
+ * @uri: next URI to play.
+ *
+ * Sets the next URI to play.
+ */
 void
 gst_player_set_uri (GstPlayer * self, const gchar * val)
 {
@@ -2584,6 +2868,13 @@ gst_player_set_uri (GstPlayer * self, const gchar * val)
   g_object_set (self, "uri", val, NULL);
 }
 
+/**
+ * gst_player_get_position:
+ * @player: #GstPlayer instance
+ *
+ * Returns: the absolute position time, in nanoseconds, of the
+ * currently-playing stream.
+ */
 GstClockTime
 gst_player_get_position (GstPlayer * self)
 {
@@ -2596,6 +2887,15 @@ gst_player_get_position (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_get_duration:
+ * @player: #GstPlayer instance
+ *
+ * Retrieves the duration of the media stream that self represents.
+ *
+ * Returns: the duration of the currently-playing media stream, in
+ * nanoseconds.
+ */
 GstClockTime
 gst_player_get_duration (GstPlayer * self)
 {
@@ -2608,6 +2908,14 @@ gst_player_get_duration (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_get_volume:
+ * @player: #GstPlayer instance
+ *
+ * Returns the current volume level, as a percentage between 0 and 1.
+ *
+ * Returns: the volume as percentage between 0 and 1.
+ */
 gdouble
 gst_player_get_volume (GstPlayer * self)
 {
@@ -2620,6 +2928,13 @@ gst_player_get_volume (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_volume:
+ * @player: #GstPlayer instance
+ * @val: the new volume level, as a percentage between 0 and 1
+ *
+ * Sets the volume level of the stream as a percentage between 0 and 1.
+ */
 void
 gst_player_set_volume (GstPlayer * self, gdouble val)
 {
@@ -2628,6 +2943,12 @@ gst_player_set_volume (GstPlayer * self, gdouble val)
   g_object_set (self, "volume", val, NULL);
 }
 
+/**
+ * gst_player_get_mute:
+ * @player: #GstPlayer instance
+ *
+ * Returns: %TRUE if the currently-playing stream is muted.
+ */
 gboolean
 gst_player_get_mute (GstPlayer * self)
 {
@@ -2640,6 +2961,13 @@ gst_player_get_mute (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_mute:
+ * @player: #GstPlayer instance
+ * @val: Mute state the should be set
+ *
+ * %TRUE if the currently-playing stream should be muted.
+ */
 void
 gst_player_set_mute (GstPlayer * self, gboolean val)
 {
@@ -2667,6 +2995,14 @@ gst_player_get_window_handle (GstPlayer * self)
   return val;
 }
 
+/**
+ * gst_player_set_window_handle:
+ * @player: #GstPlayer instance
+ * @val: handle referencing to the platform specific window
+ *
+ * Sets the platform specific window handle into which the video
+ * should be rendered
+ **/
 void
 gst_player_set_window_handle (GstPlayer * self, gpointer val)
 {
@@ -2799,6 +3135,10 @@ gst_player_get_current_subtitle_track (GstPlayer * self)
  * gst_player_set_audio_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Returns: %TRUE or %FALSE
+ *
+ * Sets the audio track @stream_idex.
  */
 gboolean
 gst_player_set_audio_track (GstPlayer * self, gint stream_index)
@@ -2825,6 +3165,10 @@ gst_player_set_audio_track (GstPlayer * self, gint stream_index)
  * gst_player_set_video_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Returns: %TRUE or %FALSE
+ *
+ * Sets the video track @stream_index.
  */
 gboolean
 gst_player_set_video_track (GstPlayer * self, gint stream_index)
@@ -2852,6 +3196,10 @@ gst_player_set_video_track (GstPlayer * self, gint stream_index)
  * gst_player_set_subtitle_track:
  * @player: #GstPlayer instance
  * @stream_index: stream index
+ *
+ * Returns: %TRUE or %FALSE
+ *
+ * Sets the subtitle strack @stream_index.
  */
 gboolean
 gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
@@ -2874,8 +3222,8 @@ gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
   return TRUE;
 }
 
-/*
- * gst_player_set_audio_enabled:
+/**
+ * gst_player_set_audio_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2894,8 +3242,8 @@ gst_player_set_audio_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
- * gst_player_set_video_enabled:
+/**
+ * gst_player_set_video_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2914,8 +3262,8 @@ gst_player_set_video_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
- * gst_player_set_subtitle_enabled:
+/**
+ * gst_player_set_subtitle_track_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
  *
@@ -2934,12 +3282,14 @@ gst_player_set_subtitle_track_enabled (GstPlayer * self, gboolean enabled)
   GST_DEBUG_OBJECT (self, "track is '%s'", enabled ? "Enabled" : "Disabled");
 }
 
-/*
+/**
  * gst_player_set_subtitle_uri:
  * @player: #GstPlayer instance
- * @suburi: subtitle uri
+ * @uri: subtitle URI
  *
- * Set the subtitle uri.
+ * Returns: %TRUE or %FALSE
+ *
+ * Sets the external subtitle URI.
  */
 gboolean
 gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
@@ -2958,13 +3308,14 @@ gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
   return TRUE;
 }
 
-/*
+/**
  * gst_player_get_subtitle_uri:
  * @player: #GstPlayer instance
  *
- * current subtitle uri
+ * current subtitle URI
  *
- * g_free() after usage.
+ * Returns: (transfer full): URI of the current external subtitle.
+ *   g_free() after usage.
  */
 gchar *
 gst_player_get_subtitle_uri (GstPlayer * self)
@@ -2982,6 +3333,13 @@ G_DEFINE_BOXED_TYPE (GstPlayerVisualization, gst_player_visualization,
     (GBoxedCopyFunc) gst_player_visualization_copy,
     (GBoxedFreeFunc) gst_player_visualization_free);
 
+/**
+ * gst_player_visualization_free:
+ * @vis: #GstPlayerVisualization instance
+ *
+ * Frees #GstPlayerVisualization allocated using g_new() or
+ * gst_player_visualization_copy().
+ */
 void
 gst_player_visualization_free (GstPlayerVisualization * vis)
 {
@@ -2992,6 +3350,15 @@ gst_player_visualization_free (GstPlayerVisualization * vis)
   g_free (vis);
 }
 
+/**
+ * gst_player_visualization_copy:
+ * @vis: #GstPlayerVisualization instance
+ *
+ * Makes a copy of the #GstPlayerVisualization. The result must be
+ * freed using gst_player_visualization_free().
+ *
+ * Returns: (transfer full): an allocated copy of @vis.
+ */
 GstPlayerVisualization *
 gst_player_visualization_copy (const GstPlayerVisualization * vis)
 {
@@ -3006,6 +3373,12 @@ gst_player_visualization_copy (const GstPlayerVisualization * vis)
   return ret;
 }
 
+/**
+ * gst_player_visualizations_free:
+ * @viss: a %NULL terminated array of #GstPlayerVisualization to free
+ *
+ * Frees a %NULL terminated array of #GstPlayerVisualization.
+ */
 void
 gst_player_visualizations_free (GstPlayerVisualization ** viss)
 {
@@ -3071,12 +3444,13 @@ gst_player_update_visualization_list (void)
   g_mutex_unlock (&vis_lock);
 }
 
-/*
+/**
  * gst_player_visualizations_get:
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type GstPlayerVisualization*): a
- *   NULL terminated array containing all available visualizations. Use
- *   gst_player_visualizations_free() after usage.
+ * Returns: (transfer full) (array zero-terminated=1)
+ *  (element-type Gst.PlayerVisualization): a %NULL terminated
+ *  array containing all available visualizations. Use
+ *  gst_player_visualizations_free() after usage.
  *
  */
 GstPlayerVisualization **
@@ -3097,11 +3471,14 @@ gst_player_visualizations_get (void)
   return ret;
 }
 
-/*
+/**
  * gst_player_set_visualization:
- * @player: #GstPlayer instance.
- * @name: visualization element obtained from #gst_player_visualizations_get()
+ * @player: #GstPlayer instance
+ * @name: visualization element obtained from
+ * #gst_player_visualizations_get()
  *
+ * Returns: %TRUE if the visualizations was set correctly. Otherwise,
+ * %FALSE.
  */
 gboolean
 gst_player_set_visualization (GstPlayer * self, const gchar * name)
@@ -3116,6 +3493,8 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
 
   if (name) {
     self->current_vis_element = gst_element_factory_make (name, NULL);
+    if (!self->current_vis_element)
+      goto error_no_element;
     gst_object_ref_sink (self->current_vis_element);
   }
   g_object_set (self->playbin, "vis-plugin", self->current_vis_element, NULL);
@@ -3124,11 +3503,16 @@ gst_player_set_visualization (GstPlayer * self, const gchar * name)
   GST_DEBUG_OBJECT (self, "set vis-plugin to '%s'", name);
 
   return TRUE;
+
+error_no_element:
+  g_mutex_unlock (&self->lock);
+  GST_WARNING_OBJECT (self, "could not find visualization '%s'", name);
+  return FALSE;
 }
 
-/*
+/**
  * gst_player_get_current_visualization:
- * @player: #GstPlayer instance.
+ * @player: #GstPlayer instance
  *
  * Returns: (transfer full): Name of the currently enabled visualization.
  *   g_free() after usage.
@@ -3158,7 +3542,7 @@ gst_player_get_current_visualization (GstPlayer * self)
   return name;
 }
 
-/*
+/**
  * gst_player_set_visualization_enabled:
  * @player: #GstPlayer instance
  * @enabled: TRUE or FALSE
@@ -3179,8 +3563,178 @@ gst_player_set_visualization_enabled (GstPlayer * self, gboolean enabled)
       enabled ? "Enabled" : "Disabled");
 }
 
+struct CBChannelMap
+{
+  const gchar *label;           /* channel label name */
+  const gchar *name;            /* get_name () */
+};
+
+static const struct CBChannelMap cb_channel_map[] = {
+  /* GST_PLAYER_COLOR_BALANCE_BRIGHTNESS */ {"BRIGHTNESS", "brightness"},
+  /* GST_PLAYER_COLOR_BALANCE_CONTRAST   */ {"CONTRAST", "contrast"},
+  /* GST_PLAYER_COLOR_BALANCE_SATURATION */ {"SATURATION", "saturation"},
+  /* GST_PLAYER_COLOR_BALANCE_HUE        */ {"HUE", "hue"},
+};
+
+static GstColorBalanceChannel *
+gst_player_color_balance_find_channel (GstPlayer * self,
+    GstPlayerColorBalanceType type)
+{
+  GstColorBalanceChannel *channel;
+  const GList *l, *channels;
+
+  if (type < GST_PLAYER_COLOR_BALANCE_BRIGHTNESS ||
+      type > GST_PLAYER_COLOR_BALANCE_HUE)
+    return NULL;
+
+  channels =
+      gst_color_balance_list_channels (GST_COLOR_BALANCE (self->playbin));
+  for (l = channels; l; l = l->next) {
+    channel = l->data;
+    if (g_strrstr (channel->label, cb_channel_map[type].label))
+      return channel;
+  }
+
+  return NULL;
+}
+
+/**
+ * gst_player_has_color_balance:
+ * @player:#GstPlayer instance
+ *
+ * Checks whether the @player has color balance support available.
+ *
+ * Returns: %TRUE if @player has color balance support. Otherwise,
+ *   %FALSE.
+ */
+gboolean
+gst_player_has_color_balance (GstPlayer * self)
+{
+  const GList *channels;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+
+  if (!GST_IS_COLOR_BALANCE (self->playbin))
+    return FALSE;
+
+  channels =
+      gst_color_balance_list_channels (GST_COLOR_BALANCE (self->playbin));
+  return (channels != NULL);
+}
+
+/**
+ * gst_player_set_color_balance:
+ * @player: #GstPlayer instance
+ * @type: #GstPlayerColorBalanceType
+ * @value: The new value for the @type, ranged [0,1]
+ *
+ * Sets the current value of the indicated channel @type to the passed
+ * value.
+ */
+void
+gst_player_set_color_balance (GstPlayer * self, GstPlayerColorBalanceType type,
+    gdouble value)
+{
+  GstColorBalanceChannel *channel;
+  gdouble new_val;
+
+  g_return_if_fail (GST_IS_PLAYER (self));
+  g_return_if_fail (value >= 0.0 && value <= 1.0);
+
+  if (!GST_IS_COLOR_BALANCE (self->playbin))
+    return;
+
+  channel = gst_player_color_balance_find_channel (self, type);
+  if (!channel)
+    return;
+
+  value = CLAMP (value, 0.0, 1.0);
+
+  /* Convert to channel range */
+  new_val = channel->min_value + value * ((gdouble) channel->max_value -
+      (gdouble) channel->min_value);
+
+  gst_color_balance_set_value (GST_COLOR_BALANCE (self->playbin), channel,
+      new_val);
+}
+
+/**
+ * gst_player_get_color_balance:
+ * @player: #GstPlayer instance
+ * @type: #GstPlayerColorBalanceType
+ *
+ * Retrieve the current value of the indicated @type.
+ *
+ * Returns: The current value of @type, between [0,1]. In case of
+ *   error -1 is returned.
+ */
+gdouble
+gst_player_get_color_balance (GstPlayer * self, GstPlayerColorBalanceType type)
+{
+  GstColorBalanceChannel *channel;
+  gint value;
+
+  g_return_val_if_fail (GST_IS_PLAYER (self), -1);
+
+  if (!GST_IS_COLOR_BALANCE (self->playbin))
+    return -1;
+
+  channel = gst_player_color_balance_find_channel (self, type);
+  if (!channel)
+    return -1;
+
+  value = gst_color_balance_get_value (GST_COLOR_BALANCE (self->playbin),
+      channel);
+
+  return ((gdouble) value -
+      (gdouble) channel->min_value) / ((gdouble) channel->max_value -
+      (gdouble) channel->min_value);
+}
+
 #define C_ENUM(v) ((gint) v)
 #define C_FLAGS(v) ((guint) v)
+
+GType
+gst_player_color_balance_type_get_type (void)
+{
+  static gsize id = 0;
+  static const GEnumValue values[] = {
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_HUE), "GST_PLAYER_COLOR_BALANCE_HUE",
+        "hue"},
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_BRIGHTNESS),
+        "GST_PLAYER_COLOR_BALANCE_BRIGHTNESS", "brightness"},
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_SATURATION),
+        "GST_PLAYER_COLOR_BALANCE_SATURATION", "saturation"},
+    {C_ENUM (GST_PLAYER_COLOR_BALANCE_CONTRAST),
+        "GST_PLAYER_COLOR_BALANCE_CONTRAST", "contrast"},
+    {0, NULL, NULL}
+  };
+
+  if (g_once_init_enter (&id)) {
+    GType tmp = g_enum_register_static ("GstPlayerColorBalanceType", values);
+    g_once_init_leave (&id, tmp);
+  }
+
+  return (GType) id;
+}
+
+/**
+ * gst_player_color_balance_type_get_name:
+ * @type: a #GstPlayerColorBalanceType
+ *
+ * Gets a string representing the given color balance type.
+ *
+ * Returns: (transfer none): a string with the name of the color
+ *   balance type.
+ */
+const gchar *
+gst_player_color_balance_type_get_name (GstPlayerColorBalanceType type)
+{
+  g_return_val_if_fail (type >= GST_PLAYER_COLOR_BALANCE_BRIGHTNESS &&
+      type <= GST_PLAYER_COLOR_BALANCE_HUE, NULL);
+
+  return cb_channel_map[type].name;
+}
 
 GType
 gst_player_state_get_type (void)
@@ -3203,6 +3757,14 @@ gst_player_state_get_type (void)
   return (GType) id;
 }
 
+/**
+ * gst_player_state_get_name:
+ * @state: a #GstPlayerState
+ *
+ * Gets a string representing the given state.
+ *
+ * Returns: (transfer none): a string with the name of the state.
+ */
 const gchar *
 gst_player_state_get_name (GstPlayerState state)
 {
@@ -3238,6 +3800,14 @@ gst_player_error_get_type (void)
   return (GType) id;
 }
 
+/**
+ * gst_player_error_get_name:
+ * @error: a #GstPlayerError
+ *
+ * Gets a string representing the given error.
+ *
+ * Returns: (transfer none): a string with the given error.
+ */
 const gchar *
 gst_player_error_get_name (GstPlayerError error)
 {

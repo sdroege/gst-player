@@ -29,6 +29,14 @@ G_BEGIN_DECLS
 GType        gst_player_state_get_type                (void);
 #define      GST_TYPE_PLAYER_STATE                    (gst_player_state_get_type ())
 
+/**
+ * GstPlayerState:
+ * @GST_PLAYER_STATE_STOPPED: the player is stopped.
+ * @GST_PLAYER_STATE_BUFFERING: the player is buffering.
+ * @GST_PLAYER_STATE_PAUSED: the player is paused.
+ * @GST_PLAYER_STATE_PLAYING: the player is currently playing a
+ * stream.
+ */
 typedef enum
 {
   GST_PLAYER_STATE_STOPPED,
@@ -44,6 +52,10 @@ GType        gst_player_error_get_type                (void);
 #define      GST_PLAYER_ERROR                         (gst_player_error_quark ())
 #define      GST_TYPE_PLAYER_ERROR                    (gst_player_error_get_type ())
 
+/**
+ * GstPlayerError:
+ * @GST_PLAYER_ERROR_FAILED: generic error.
+ */
 typedef enum {
   GST_PLAYER_ERROR_FAILED = 0
 } GstPlayerError;
@@ -71,6 +83,9 @@ void         gst_player_stop                          (GstPlayer    * player);
 
 void         gst_player_seek                          (GstPlayer    * player,
                                                        GstClockTime   position);
+void         gst_player_set_rate                      (GstPlayer    * player,
+                                                       gdouble        rate);
+gdouble      gst_player_get_rate                      (GstPlayer    * player);
 
 gboolean     gst_player_get_dispatch_to_main_context  (GstPlayer    * player);
 void         gst_player_set_dispatch_to_main_context  (GstPlayer    * player,
@@ -139,6 +154,13 @@ void         gst_player_set_visualization_enabled     (GstPlayer    * player,
 gchar *      gst_player_get_current_visualization     (GstPlayer    * player);
 
 typedef struct _GstPlayerVisualization GstPlayerVisualization;
+/**
+ * GstPlayerVisualization:
+ * @name: name of the visualization.
+ * @description: description of the visualization.
+ *
+ * A #GstPlayerVisualization descriptor.
+ */
 struct _GstPlayerVisualization {
   gchar *name;
   gchar *description;
@@ -151,6 +173,35 @@ void                      gst_player_visualization_free  (GstPlayerVisualization
 
 GstPlayerVisualization ** gst_player_visualizations_get  (void);
 void                      gst_player_visualizations_free (GstPlayerVisualization **viss);
+
+
+#define GST_TYPE_PLAYER_COLOR_BALANCE_TYPE   (gst_player_color_balance_type_get_type ())
+GType gst_player_color_balance_type_get_type (void);
+
+/**
+ * GstPlayerColorBalanceType:
+ * @GST_PLAYER_COLOR_BALANCE_BRIGHTNESS: brightness or black level.
+ * @GST_PLAYER_COLOR_BALANCE_CONTRAST: contrast or luma gain.
+ * @GST_PLAYER_COLOR_BALANCE_SATURATION: color saturation or chroma
+ * gain.
+ * @GST_PLAYER_COLOR_BALANCE_HUE: hue or color balance.
+ */
+typedef enum
+{
+  GST_PLAYER_COLOR_BALANCE_BRIGHTNESS,
+  GST_PLAYER_COLOR_BALANCE_CONTRAST,
+  GST_PLAYER_COLOR_BALANCE_SATURATION,
+  GST_PLAYER_COLOR_BALANCE_HUE,
+} GstPlayerColorBalanceType;
+
+const gchar *gst_player_color_balance_type_get_name (GstPlayerColorBalanceType type);
+
+gboolean gst_player_has_color_balance (GstPlayer * player);
+void     gst_player_set_color_balance (GstPlayer * player,
+                                       GstPlayerColorBalanceType type,
+                                       gdouble value);
+gdouble  gst_player_get_color_balance (GstPlayer * player,
+                                       GstPlayerColorBalanceType type);
 
 G_END_DECLS
 
