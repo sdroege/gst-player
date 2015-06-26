@@ -59,6 +59,14 @@ G_STMT_START {                                                          \
     "'" #a "' (%s) is not equal to '" #b "' (%s)", first, second);      \
 } G_STMT_END;
 
+#define fail_unless_equals_double(a, b)                                 \
+G_STMT_START {                                                          \
+  double first = a;                                                     \
+  double second = b;                                                    \
+  fail_unless(first == second,                                          \
+    "'" #a "' (%lf) is not equal to '" #b"' (%lf)", first, second);     \
+} G_STMT_END;
+
 #include <gst/player/gstplayer.h>
 
 GST_DEBUG_CATEGORY_STATIC (test_debug);
@@ -1032,6 +1040,107 @@ START_TEST (test_play_external_suburi)
 
 END_TEST;
 
+static void
+test_play_rate_cb (GstPlayer * player,
+    TestPlayerStateChange change, TestPlayerState * old_state,
+    TestPlayerState * new_state)
+{
+  gint steps = GPOINTER_TO_INT (new_state->test_data) & 0xf;
+  gint mask = GPOINTER_TO_INT (new_state->test_data) & 0xf0;
+
+  if (new_state->state == GST_PLAYER_STATE_PLAYING && !steps) {
+    guint64 dur = -1, pos = -1;
+
+    g_object_get (player, "position", &pos, "duration", &dur, NULL);
+    pos = pos + dur * 20;  /* seek 20% */
+    gst_player_seek (player, pos);
+
+    /* default rate should be 1.0 */
+    fail_unless_equals_double (gst_player_get_rate (player), 1.0);
+
+    if (mask == 0x10)
+      gst_player_set_rate (player, 1.5);
+    else if (mask == 0x20)
+      gst_player_set_rate (player, -1.0);
+
+    new_state->test_data = GINT_TO_POINTER (mask + steps + 1);
+  } else if (change == STATE_CHANGE_END_OF_STREAM ||
+      change == STATE_CHANGE_ERROR) {
+    g_main_loop_quit (new_state->loop);
+  } else if (steps && (change == STATE_CHANGE_POSITION_UPDATED)) {
+    if (steps == 10) {
+      g_main_loop_quit (new_state->loop);
+    } else {
+      if (mask == 0x10 && (new_state->position > old_state->position))
+        new_state->test_data = GINT_TO_POINTER (mask + steps + 1);
+      else if (mask == 0x20 && (new_state->position < old_state->position))
+        new_state->test_data = GINT_TO_POINTER (mask + steps + 1);
+    }
+  }
+}
+
+START_TEST (test_play_forward_rate)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_rate_cb;
+  state.test_data = GINT_TO_POINTER (0x10);
+
+  player = test_player_new (&state);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/audio.ogg", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data) & 0xf, 10);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
+START_TEST (test_play_backward_rate)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_rate_cb;
+  state.test_data = GINT_TO_POINTER (0x20);
+
+  player = test_player_new (&state);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/audio.ogg", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data) & 0xf, 10);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
 START_TEST (test_play_audio_video_eos)
 {
   GstPlayer *player;
@@ -1239,6 +1348,8 @@ player_suite (void)
   tcase_add_test (tc_general, test_play_stream_disable_enable);
   tcase_add_test (tc_general, test_play_error_invalid_external_suburi);
   tcase_add_test (tc_general, test_play_external_suburi);
+  tcase_add_test (tc_general, test_play_forward_rate);
+  tcase_add_test (tc_general, test_play_backward_rate);
 
   suite_add_tcase (s, tc_general);
 
