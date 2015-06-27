@@ -60,8 +60,11 @@ AC_SUBST(GLIB_PREFIX)
 GST_PREFIX="`$PKG_CONFIG --variable=prefix gstreamer-1.0`"
 AC_SUBST(GST_PREFIX)
 
-PKG_CHECK_MODULES(GTK, [gtk+-3.0], [have_gtk="yes"], [have_gtk="no"])
+PKG_CHECK_MODULES(GTK, [gtk+-3.0 >= 3.14], [have_gtk="yes"], [have_gtk="no"])
 AM_CONDITIONAL(HAVE_GTK, test "x$have_gtk" != "xno")
+
+PKG_CHECK_MODULES(GMODULE, [gmodule-2.0], [have_gmodules="yes"], [have_modules="no"])
+AM_CONDITIONAL(HAVE_GMODULE, test "x$have_gmodules" != "xno")
 
 PKG_CHECK_MODULES(GTK_X11, [gtk+-x11-3.0 x11], [have_gtk_x11="yes"], [have_gtk_x11="no"])
 AM_CONDITIONAL(HAVE_GTK_X11, test "x$have_gtk_x11" != "xno")
