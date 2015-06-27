@@ -47,6 +47,7 @@ GstPlayer-@GST_PLAYER_API_VERSION@.gir: $(INTROSPECTION_SCANNER) libgstplayer-@G
 		-I$(top_builddir)/lib \
 		--c-include "gst/player/player.h" \
 		--add-include-path=$(top_builddir)/lib \
+		--add-include-path=`$(PKG_CONFIG) --variable=girdir gstreamer-1.0` \
 		--library-path=$(top_builddir)/lib \
 		--library=libgstplayer-@GST_PLAYER_API_VERSION@.la \
 		--include=GObject-2.0 \
@@ -74,7 +75,11 @@ typelibsdir = $(libdir)/girepository-1.0/
 typelibs_DATA = $(BUILT_GIRSOURCES:.gir=.typelib)
 
 %.typelib: %.gir $(INTROSPECTION_COMPILER)
-	$(AM_V_GEN)$(INTROSPECTION_COMPILER) --includedir=$(srcdir)/lib --includedir=$(builddir)/lib $(INTROSPECTION_COMPILER_OPTS) $< -o $(@F)
+	$(AM_V_GEN)$(INTROSPECTION_COMPILER) \
+		--includedir=$(srcdir)/lib \
+		--includedir=$(builddir)/lib \
+		--includedir=`$(PKG_CONFIG) --variable=girdir gstreamer-1.0` \
+		$(INTROSPECTION_COMPILER_OPTS) $< -o $(@F)
 
 CLEANFILES += $(BUILT_GIRSOURCES) $(typelibs_DATA)
 endif
