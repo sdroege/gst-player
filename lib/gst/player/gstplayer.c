@@ -2700,9 +2700,11 @@ gst_player_seek_internal_locked (GstPlayer * self)
 
   flags |= GST_SEEK_FLAG_FLUSH;
 
+#if GST_CHECK_VERSION(1,5,0)
   if (rate != 1.0) {
     flags |= GST_SEEK_FLAG_TRICKMODE;
   }
+#endif
 
   if (rate >= 0.0) {
     s_event = gst_event_new_seek (rate, GST_FORMAT_TIME, flags,
