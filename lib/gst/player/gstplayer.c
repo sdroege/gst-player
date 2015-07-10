@@ -96,6 +96,7 @@ enum
   SIGNAL_MEDIA_INFO_UPDATED,
   SIGNAL_VOLUME_CHANGED,
   SIGNAL_MUTE_CHANGED,
+  SIGNAL_SEEK_DONE,
   SIGNAL_LAST
 };
 
@@ -358,6 +359,11 @@ gst_player_class_init (GstPlayerClass * klass)
       g_signal_new ("warning", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
       NULL, NULL, G_TYPE_NONE, 1, G_TYPE_ERROR);
+
+  signals[SIGNAL_SEEK_DONE] =
+      g_signal_new ("seek-done", G_TYPE_FROM_CLASS (klass),
+      G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS, 0, NULL,
+      NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_CLOCK_TIME);
 }
 
 static void
@@ -1315,6 +1321,48 @@ emit_duration_changed (GstPlayer * self, GstClockTime duration)
   }
 }
 
+typedef struct
+{
+  GstPlayer *player;
+  GstClockTime position;
+} SeekDoneSignalData;
+
+static gboolean
+seek_done_dispatch (gpointer user_data)
+{
+  SeekDoneSignalData *data = user_data;
+
+  g_signal_emit (data->player, signals[SIGNAL_SEEK_DONE], 0, data->position);
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+seek_done_signal_data_free (SeekDoneSignalData * data)
+{
+  g_object_unref (data->player);
+  g_free (data);
+}
+
+static void
+emit_seek_done (GstPlayer * self)
+{
+  if (self->dispatch_to_main_context
+      && g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
+          signals[SIGNAL_SEEK_DONE], 0, NULL, NULL, NULL) != 0) {
+    SeekDoneSignalData *data = g_new (SeekDoneSignalData, 1);
+
+    data->player = g_object_ref (self);
+    data->position = gst_player_get_position (self);
+    g_main_context_invoke_full (self->application_context,
+        G_PRIORITY_DEFAULT, seek_done_dispatch, data,
+        (GDestroyNotify) seek_done_signal_data_free);
+  } else {
+    g_signal_emit (self, signals[SIGNAL_SEEK_DONE], 0,
+        gst_player_get_position (self));
+  }
+}
+
 static void
 state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 {
@@ -1394,6 +1442,7 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
           gst_player_seek_internal_locked (self);
         } else {
           GST_DEBUG_OBJECT (self, "Seek finished");
+          emit_seek_done (self);
         }
       }
 
