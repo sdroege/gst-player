@@ -114,6 +114,7 @@ typedef enum
   STATE_CHANGE_STATE_CHANGED,
   STATE_CHANGE_VIDEO_DIMENSIONS_CHANGED,
   STATE_CHANGE_MEDIA_INFO_UPDATED,
+  STATE_CHANGE_SEEK_DONE,
 } TestPlayerStateChange;
 
 static const gchar *
@@ -136,6 +137,8 @@ test_player_state_change_get_name (TestPlayerStateChange change)
       return "video-dimensions-changed";
     case STATE_CHANGE_MEDIA_INFO_UPDATED:
       return "media-info-updated";
+    case STATE_CHANGE_SEEK_DONE:
+      return "seek-done";
     default:
       g_assert_not_reached ();
       break;
@@ -148,8 +151,8 @@ struct _TestPlayerState
   GMainLoop *loop;
 
   gint buffering_percent;
-  guint64 position, duration;
-  gboolean end_of_stream, error, warning;
+  guint64 position, duration, seek_done_position;
+  gboolean end_of_stream, error, warning, seek_done;
   GstPlayerState state;
   gint width, height;
   GstPlayerMediaInfo *media_info;
@@ -168,8 +171,10 @@ test_player_state_change_debug (GstPlayer * player,
       "\tbuffering %d%% -> %d%%\n"
       "\tposition %" GST_TIME_FORMAT " -> %" GST_TIME_FORMAT "\n"
       "\tduration %" GST_TIME_FORMAT " -> %" GST_TIME_FORMAT "\n"
+      "\tseek position %" GST_TIME_FORMAT " -> %" GST_TIME_FORMAT "\n"
       "\tend-of-stream %d -> %d\n"
       "\terror %d -> %d\n"
+      "\tseek_done %d -> %d\n"
       "\tstate %s -> %s\n"
       "\twidth/height %d/%d -> %d/%d\n"
       "\tmedia_info %p -> %p",
@@ -177,8 +182,10 @@ test_player_state_change_debug (GstPlayer * player,
       old_state->buffering_percent, new_state->buffering_percent,
       GST_TIME_ARGS (old_state->position), GST_TIME_ARGS (new_state->position),
       GST_TIME_ARGS (old_state->duration), GST_TIME_ARGS (new_state->duration),
-      old_state->end_of_stream, new_state->end_of_stream,
-      old_state->error, new_state->error,
+      GST_TIME_ARGS (old_state->seek_done_position),
+      GST_TIME_ARGS (new_state->seek_done_position), old_state->end_of_stream,
+      new_state->end_of_stream, old_state->error, new_state->error,
+      old_state->seek_done, new_state->seek_done,
       gst_player_state_get_name (old_state->state),
       gst_player_state_get_name (new_state->state), old_state->width,
       old_state->height, new_state->width, new_state->height,
@@ -189,8 +196,8 @@ static void
 test_player_state_reset (TestPlayerState * state)
 {
   state->buffering_percent = 100;
-  state->position = state->duration = -1;
-  state->end_of_stream = state->error = FALSE;
+  state->position = state->duration = state->seek_done_position = -1;
+  state->end_of_stream = state->error = state->seek_done = FALSE;
   state->state = GST_PLAYER_STATE_STOPPED;
   state->width = state->height = 0;
   state->media_info = NULL;
@@ -310,6 +317,18 @@ video_dimensions_changed_cb (GstPlayer * player, gint width, gint height,
       &old_state, state);
 }
 
+static void
+seek_done_cb (GstPlayer * player, guint64 position, TestPlayerState * state)
+{
+  TestPlayerState old_state = *state;
+
+  state->seek_done = TRUE;
+  state->seek_done_position = position;
+  test_player_state_change_debug (player, STATE_CHANGE_SEEK_DONE,
+      &old_state, state);
+  state->test_callback (player, STATE_CHANGE_SEEK_DONE, &old_state, state);
+}
+
 static GstPlayer *
 test_player_new (TestPlayerState * state)
 {
@@ -346,6 +365,7 @@ test_player_new (TestPlayerState * state)
       G_CALLBACK (media_info_updated_cb), state);
   g_signal_connect (player, "video-dimensions-changed",
       G_CALLBACK (video_dimensions_changed_cb), state);
+  g_signal_connect (player, "seek-done", G_CALLBACK (seek_done_cb), state);
 
   return player;
 }
@@ -749,7 +769,7 @@ test_play_stream_switch_audio_cb (GstPlayer * player,
 
     audio = gst_player_get_current_audio_track (player);
     fail_unless (audio != NULL);
-    index = gst_player_stream_info_get_index ((GstPlayerStreamInfo *)audio);
+    index = gst_player_stream_info_get_index ((GstPlayerStreamInfo *) audio);
     fail_unless_equals_int (index, 1);
     g_object_unref (audio);
 
@@ -813,7 +833,7 @@ test_play_stream_switch_subtitle_cb (GstPlayer * player,
 
     sub = gst_player_get_current_subtitle_track (player);
     fail_unless (sub != NULL);
-    index = gst_player_stream_info_get_index ((GstPlayerStreamInfo *)sub);
+    index = gst_player_stream_info_get_index ((GstPlayerStreamInfo *) sub);
     fail_unless_equals_int (index, 5);
     g_object_unref (sub);
 
@@ -978,7 +998,7 @@ test_play_rate_cb (GstPlayer * player,
     guint64 dur = -1, pos = -1;
 
     g_object_get (player, "position", &pos, "duration", &dur, NULL);
-    pos = pos + dur * 20;  /* seek 20% */
+    pos = pos + dur * 20;       /* seek 20% */
     gst_player_seek (player, pos);
 
     /* default rate should be 1.0 */
@@ -1255,6 +1275,56 @@ START_TEST (test_play_error_invalid_uri_and_play)
 
 END_TEST;
 
+static void
+test_play_seek_done_cb (GstPlayer * player,
+    TestPlayerStateChange change, TestPlayerState * old_state,
+    TestPlayerState * new_state)
+{
+  gint step = GPOINTER_TO_INT (new_state->test_data) & (~0x10);
+
+  if (new_state->state == GST_PLAYER_STATE_PLAYING && !step) {
+    gst_player_seek (player, 0);
+    new_state->test_data = GINT_TO_POINTER (step + 1);
+  } else if (change == STATE_CHANGE_SEEK_DONE || change == STATE_CHANGE_ERROR) {
+    fail_unless_equals_int (change, STATE_CHANGE_SEEK_DONE);
+    fail_unless_equals_uint64 (new_state->seek_done_position,
+        G_GUINT64_CONSTANT (0));
+    new_state->test_data = GINT_TO_POINTER (step + 1);
+    g_main_loop_quit (new_state->loop);
+  }
+}
+
+START_TEST (test_play_audio_video_seek_done)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_seek_done_cb;
+  state.test_data = GINT_TO_POINTER (0);
+
+  player = test_player_new (&state);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/audio-video.ogg", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data) & (~0x10), 2);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
 static Suite *
 player_suite (void)
 {
@@ -1277,6 +1347,7 @@ player_suite (void)
   tcase_add_test (tc_general, test_play_external_suburi);
   tcase_add_test (tc_general, test_play_forward_rate);
   tcase_add_test (tc_general, test_play_backward_rate);
+  tcase_add_test (tc_general, test_play_audio_video_seek_done);
   suite_add_tcase (s, tc_general);
 
   return s;
