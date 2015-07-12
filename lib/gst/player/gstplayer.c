@@ -163,6 +163,7 @@ G_DEFINE_TYPE (GstPlayer, gst_player, GST_TYPE_OBJECT);
 static guint signals[SIGNAL_LAST] = { 0, };
 static GParamSpec *param_specs[PROP_LAST] = { NULL, };
 
+static void gst_player_dispose (GObject * object);
 static void gst_player_finalize (GObject * object);
 static void gst_player_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -216,6 +217,9 @@ gst_player_init (GstPlayer * self)
   g_mutex_init (&self->lock);
   g_cond_init (&self->cond);
 
+  self->context = g_main_context_new ();
+  self->loop = g_main_loop_new (self->context, FALSE);
+
   self->seek_pending = FALSE;
   self->seek_position = GST_CLOCK_TIME_NONE;
   self->last_seek_time = GST_CLOCK_TIME_NONE;
@@ -234,6 +238,7 @@ gst_player_class_init (GstPlayerClass * klass)
 
   gobject_class->set_property = gst_player_set_property;
   gobject_class->get_property = gst_player_get_property;
+  gobject_class->dispose = gst_player_dispose;
   gobject_class->finalize = gst_player_finalize;
 
   param_specs[PROP_DISPATCH_TO_MAIN_CONTEXT] =
@@ -356,13 +361,32 @@ gst_player_class_init (GstPlayerClass * klass)
 }
 
 static void
-gst_player_finalize (GObject * object)
+gst_player_dispose (GObject * object)
 {
   GstPlayer *self = GST_PLAYER (object);
 
   GST_TRACE_OBJECT (self, "Stopping main thread");
-  g_main_loop_quit (self->loop);
-  g_thread_join (self->thread);
+
+  if (self->loop) {
+    g_main_loop_quit (self->loop);
+
+    g_thread_join (self->thread);
+    self->thread = NULL;
+
+    g_main_loop_unref (self->loop);
+    self->loop = NULL;
+
+    g_main_context_unref (self->context);
+    self->context = NULL;
+  }
+
+  G_OBJECT_CLASS (parent_class)->dispose (object);
+}
+
+static void
+gst_player_finalize (GObject * object)
+{
+  GstPlayer *self = GST_PLAYER (object);
 
   GST_TRACE_OBJECT (self, "Finalizing");
 
@@ -2321,10 +2345,7 @@ gst_player_main (gpointer data)
 
   GST_TRACE_OBJECT (self, "Starting main thread");
 
-  self->context = g_main_context_new ();
   g_main_context_push_thread_default (self->context);
-
-  self->loop = g_main_loop_new (self->context, FALSE);
 
   source = g_idle_source_new ();
   g_source_set_callback (source, (GSourceFunc) main_loop_running_cb, self,
@@ -2390,9 +2411,6 @@ gst_player_main (gpointer data)
   g_main_loop_run (self->loop);
   GST_TRACE_OBJECT (self, "Stopped main loop");
 
-  g_main_loop_unref (self->loop);
-  self->loop = NULL;
-
   g_source_destroy (bus_source);
   g_source_unref (bus_source);
   gst_object_unref (bus);
@@ -2412,8 +2430,6 @@ gst_player_main (gpointer data)
   g_mutex_unlock (&self->lock);
 
   g_main_context_pop_thread_default (self->context);
-  g_main_context_unref (self->context);
-  self->context = NULL;
 
   self->target_state = GST_STATE_NULL;
   self->current_state = GST_STATE_NULL;
