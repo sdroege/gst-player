@@ -42,6 +42,8 @@ android/app/src/main/libs/armeabi/libgst*.so
 
 gst-play/gst-play
 gtk/gtk-play
+gtk/gtk-play-resources.c
+gtk/gtk-play-resources.h
 
 docs/**/*.stamp
 docs/*/*-decl-list.txt
