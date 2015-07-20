@@ -3371,7 +3371,6 @@ gboolean
 gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
 {
   g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
-  g_return_val_if_fail (suburi != NULL, FALSE);
 
   g_mutex_lock (&self->lock);
   if (self->suburi)
