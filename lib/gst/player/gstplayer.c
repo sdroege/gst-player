@@ -553,7 +553,7 @@ gst_player_get_property (GObject * object, guint prop_id,
           g_value_get_boolean (value));
       break;
     case PROP_POSITION:{
-      gint64 position;
+      gint64 position = 0;
 
       gst_element_query_position (self->playbin, GST_FORMAT_TIME, &position);
       g_value_set_uint64 (value, position);
@@ -562,7 +562,7 @@ gst_player_get_property (GObject * object, guint prop_id,
       break;
     }
     case PROP_DURATION:{
-      gint64 duration;
+      gint64 duration = 0;
 
       gst_element_query_duration (self->playbin, GST_FORMAT_TIME, &duration);
       g_value_set_uint64 (value, duration);
