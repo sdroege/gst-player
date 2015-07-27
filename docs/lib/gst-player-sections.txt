@@ -29,6 +29,9 @@ gst_player_get_window_handle
 
 gst_player_get_pipeline
 
+gst_player_set_position_update_interval
+gst_player_get_position_update_interval
+
 GstPlayerState
 gst_player_state_get_name
 

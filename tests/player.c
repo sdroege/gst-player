@@ -103,6 +103,30 @@ START_TEST (test_set_and_get_uri)
 
 END_TEST;
 
+START_TEST (test_set_and_get_position_update_interval)
+{
+  GstPlayer *player;
+  guint interval = 0;
+
+  player = gst_player_new ();
+
+  fail_unless (player != NULL);
+
+  gst_player_set_position_update_interval (player, 500);
+  interval = gst_player_get_position_update_interval (player);
+
+  fail_unless (interval == 500);
+
+  g_object_set (player, "position-update-interval", 1000, NULL);
+  g_object_get (player, "position-update-interval", &interval, NULL);
+
+  fail_unless_equals_int (interval, 1000);
+
+  g_object_unref (player);
+}
+
+END_TEST;
+
 typedef enum
 {
   STATE_CHANGE_BUFFERING,
@@ -1325,6 +1349,89 @@ START_TEST (test_play_audio_video_seek_done)
 
 END_TEST;
 
+static void
+test_play_position_update_interval_cb (GstPlayer * player,
+    TestPlayerStateChange change, TestPlayerState * old_state,
+    TestPlayerState * new_state)
+{
+  static gboolean do_quit = TRUE;
+  static GstClockTime last_position = GST_CLOCK_TIME_NONE;
+
+  gint steps = GPOINTER_TO_INT (new_state->test_data);
+
+  if (new_state->state == GST_PLAYER_STATE_PLAYING && !steps) {
+    new_state->test_data = GINT_TO_POINTER (steps + 1);
+  } else if (steps && change == STATE_CHANGE_POSITION_UPDATED) {
+    GstClockTime position = gst_player_get_position (player);
+    new_state->test_data = GINT_TO_POINTER (steps + 1);
+
+    if (GST_CLOCK_TIME_IS_VALID (last_position)) {
+      GstClockTime interval = GST_CLOCK_DIFF (last_position, position);
+      GST_DEBUG_OBJECT (player, "position update interval: %" GST_TIME_FORMAT "\n",
+          GST_TIME_ARGS (interval));
+      fail_unless (interval > (590 * GST_MSECOND) &&
+          interval < (610 * GST_MSECOND));
+    }
+
+    last_position = position;
+
+    if (do_quit && position >= 2000 * GST_MSECOND) {
+      do_quit = FALSE;
+      gst_player_set_position_update_interval (player, 0);
+      g_main_loop_quit (new_state->loop);
+    }
+  } else if (change == STATE_CHANGE_END_OF_STREAM ||
+      change == STATE_CHANGE_ERROR) {
+    g_main_loop_quit (new_state->loop);
+  }
+}
+
+static gboolean
+quit_loop_cb (gpointer user_data)
+{
+  GMainLoop *loop = user_data;
+  g_main_loop_quit (loop);
+
+  return G_SOURCE_REMOVE;
+}
+
+START_TEST (test_play_position_update_interval)
+{
+  GstPlayer *player;
+  TestPlayerState state;
+  gchar *uri;
+
+  memset (&state, 0, sizeof (state));
+  state.loop = g_main_loop_new (NULL, FALSE);
+  state.test_callback = test_play_position_update_interval_cb;
+  state.test_data = GINT_TO_POINTER (0);
+
+  player = test_player_new (&state);
+  gst_player_set_position_update_interval (player, 600);
+
+  fail_unless (player != NULL);
+
+  uri = gst_filename_to_uri (TEST_PATH "/sintel.mkv", NULL);
+  fail_unless (uri != NULL);
+  gst_player_set_uri (player, uri);
+  g_free (uri);
+
+  gst_player_play (player);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data), 5);
+
+  g_timeout_add (2000, quit_loop_cb, state.loop);
+  g_main_loop_run (state.loop);
+
+  fail_unless_equals_int (GPOINTER_TO_INT (state.test_data), 5);
+
+  g_object_unref (player);
+  g_main_loop_unref (state.loop);
+}
+
+END_TEST;
+
 static Suite *
 player_suite (void)
 {
@@ -1335,6 +1442,8 @@ player_suite (void)
   tcase_set_timeout (tc_general, 120);
   tcase_add_test (tc_general, test_create_and_free);
   tcase_add_test (tc_general, test_set_and_get_uri);
+  tcase_add_test (tc_general, test_set_and_get_position_update_interval);
+  tcase_add_test (tc_general, test_play_position_update_interval);
   tcase_add_test (tc_general, test_play_audio_eos);
   tcase_add_test (tc_general, test_play_audio_video_eos);
   tcase_add_test (tc_general, test_play_error_invalid_uri);
