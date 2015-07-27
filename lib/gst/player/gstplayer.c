@@ -52,6 +52,13 @@
 GST_DEBUG_CATEGORY_STATIC (gst_player_debug);
 #define GST_CAT_DEFAULT gst_player_debug
 
+#define DEFAULT_URI NULL
+#define DEFAULT_POSITION GST_CLOCK_TIME_NONE
+#define DEFAULT_DURATION GST_CLOCK_TIME_NONE
+#define DEFAULT_VOLUME 1.0
+#define DEFAULT_MUTE FALSE
+#define DEFAULT_RATE 1.0
+
 GQuark
 gst_player_error_quark (void)
 {
@@ -248,14 +255,14 @@ gst_player_class_init (GstPlayerClass * klass)
       FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_URI] = g_param_spec_string ("uri", "URI", "Current URI",
-      NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      DEFAULT_URI, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_SUBURI] = g_param_spec_string ("suburi", "Subtitle URI",
       "Current Subtitle URI", NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_POSITION] =
       g_param_spec_uint64 ("position", "Position", "Current Position",
-      0, G_MAXUINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      0, G_MAXUINT64, DEFAULT_POSITION, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_MEDIA_INFO] =
       g_param_spec_object ("media-info", "Media Info",
@@ -279,15 +286,15 @@ gst_player_class_init (GstPlayerClass * klass)
 
   param_specs[PROP_DURATION] =
       g_param_spec_uint64 ("duration", "Duration", "Duration",
-      0, G_MAXUINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+      0, G_MAXUINT64, DEFAULT_DURATION, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_VOLUME] =
       g_param_spec_double ("volume", "Volume", "Volume",
-      0, 10.0, 1.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      0, 10.0, DEFAULT_VOLUME, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_MUTE] =
       g_param_spec_boolean ("mute", "Mute", "Mute",
-      FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      DEFAULT_MUTE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   param_specs[PROP_WINDOW_HANDLE] =
       g_param_spec_pointer ("window-handle", "Window Handle",
@@ -301,7 +308,7 @@ gst_player_class_init (GstPlayerClass * klass)
 
   param_specs[PROP_RATE] =
       g_param_spec_double ("rate", "rate", "Playback rate",
-      -64.0, 64.0, 1.0, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+      -64.0, 64.0, DEFAULT_RATE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, param_specs);
 
@@ -2859,7 +2866,7 @@ gst_player_set_rate (GstPlayer * self, gdouble rate)
 gdouble
 gst_player_get_rate (GstPlayer * self)
 {
-  g_return_val_if_fail (GST_IS_PLAYER (self), 1.0);
+  g_return_val_if_fail (GST_IS_PLAYER (self), DEFAULT_RATE);
 
   return self->rate;
 }
@@ -2971,7 +2978,7 @@ gst_player_get_uri (GstPlayer * self)
 {
   gchar *val;
 
-  g_return_val_if_fail (GST_IS_PLAYER (self), NULL);
+  g_return_val_if_fail (GST_IS_PLAYER (self), DEFAULT_URI);
 
   g_object_get (self, "uri", &val, NULL);
 
@@ -3005,7 +3012,7 @@ gst_player_get_position (GstPlayer * self)
 {
   GstClockTime val;
 
-  g_return_val_if_fail (GST_IS_PLAYER (self), GST_CLOCK_TIME_NONE);
+  g_return_val_if_fail (GST_IS_PLAYER (self), DEFAULT_POSITION);
 
   g_object_get (self, "position", &val, NULL);
 
@@ -3026,7 +3033,7 @@ gst_player_get_duration (GstPlayer * self)
 {
   GstClockTime val;
 
-  g_return_val_if_fail (GST_IS_PLAYER (self), GST_CLOCK_TIME_NONE);
+  g_return_val_if_fail (GST_IS_PLAYER (self), DEFAULT_DURATION);
 
   g_object_get (self, "duration", &val, NULL);
 
@@ -3046,7 +3053,7 @@ gst_player_get_volume (GstPlayer * self)
 {
   gdouble val;
 
-  g_return_val_if_fail (GST_IS_PLAYER (self), 1.0);
+  g_return_val_if_fail (GST_IS_PLAYER (self), DEFAULT_VOLUME);
 
   g_object_get (self, "volume", &val, NULL);
 
@@ -3079,7 +3086,7 @@ gst_player_get_mute (GstPlayer * self)
 {
   gboolean val;
 
-  g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
+  g_return_val_if_fail (GST_IS_PLAYER (self), DEFAULT_MUTE);
 
   g_object_get (self, "mute", &val, NULL);
 
