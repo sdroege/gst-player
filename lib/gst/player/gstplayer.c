@@ -523,8 +523,7 @@ gst_player_set_property (GObject * object, guint prop_id,
       GST_DEBUG_OBJECT (self, "Set rate=%lf", g_value_get_double (value));
       g_mutex_unlock (&self->lock);
 
-      g_main_context_invoke_full (self->context, G_PRIORITY_DEFAULT,
-          gst_player_set_rate_internal, self, NULL);
+      gst_player_set_rate_internal (self);
       break;
     case PROP_MUTE:
       GST_DEBUG_OBJECT (self, "Set mute=%d", g_value_get_boolean (value));
