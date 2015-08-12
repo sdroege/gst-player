@@ -62,8 +62,26 @@ typedef enum {
 
 const gchar *gst_player_error_get_name                (GstPlayerError error);
 
+typedef struct _GstPlayerSignalDispatcher GstPlayerSignalDispatcher;
+typedef struct _GstPlayerSignalDispatcherInterface GstPlayerSignalDispatcherInterface;
+
+#define GST_TYPE_PLAYER_SIGNAL_DISPATCHER                (gst_player_signal_dispatcher_get_type ())
+#define GST_PLAYER_SIGNAL_DISPATCHER(obj)                (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_PLAYER_SIGNAL_DISPATCHER, GstPlayerSignalDispatcher))
+#define GST_IS_PLAYER_SIGNAL_DISPATCHER(obj)             (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER_SIGNAL_DISPATCHER))
+#define GST_PLAYER_SIGNAL_DISPATCHER_GET_INTERFACE(inst) (G_TYPE_INSTANCE_GET_INTERFACE ((inst), GST_TYPE_PLAYER_SIGNAL_DISPATCHER, GstPlayerSignalDispatcherInterface))
+
 typedef struct _GstPlayer GstPlayer;
 typedef struct _GstPlayerClass GstPlayerClass;
+
+struct _GstPlayerSignalDispatcherInterface {
+  GTypeInterface parent_iface;
+
+  void (*dispatch) (GstPlayerSignalDispatcher * self,
+                    GstPlayer * player,
+                    void (*emitter) (gpointer data),
+                    gpointer data,
+                    GDestroyNotify destroy);
+};
 
 #define GST_TYPE_PLAYER             (gst_player_get_type ())
 #define GST_IS_PLAYER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER))
@@ -73,9 +91,12 @@ typedef struct _GstPlayerClass GstPlayerClass;
 #define GST_PLAYER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_PLAYER, GstPlayerClass))
 #define GST_PLAYER_CAST(obj)        ((GstPlayer*)(obj))
 
+GType        gst_player_signal_dispatcher_get_type    (void);
+
 GType        gst_player_get_type                      (void);
 
 GstPlayer *  gst_player_new                           (void);
+GstPlayer *  gst_player_new_full                      (GstPlayerSignalDispatcher * signal_dispatcher);
 
 void         gst_player_play                          (GstPlayer    * player);
 void         gst_player_pause                         (GstPlayer    * player);
@@ -90,10 +111,6 @@ gdouble      gst_player_get_rate                      (GstPlayer    * player);
 void         gst_player_set_position_update_interval  (GstPlayer    * player,
                                                        guint          interval);
 guint        gst_player_get_position_update_interval  (GstPlayer    * player);
-
-gboolean     gst_player_get_dispatch_to_main_context  (GstPlayer    * player);
-void         gst_player_set_dispatch_to_main_context  (GstPlayer    * player,
-                                                       gboolean       val);
 
 gchar *      gst_player_get_uri                       (GstPlayer    * player);
 void         gst_player_set_uri                       (GstPlayer    * player,
@@ -206,6 +223,8 @@ void     gst_player_set_color_balance (GstPlayer * player,
                                        gdouble value);
 gdouble  gst_player_get_color_balance (GstPlayer * player,
                                        GstPlayerColorBalanceType type);
+
+GstPlayerSignalDispatcher * gst_player_g_main_context_signal_dispatcher_new (GMainContext * application_context);
 
 G_END_DECLS
 

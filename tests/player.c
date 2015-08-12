@@ -359,7 +359,7 @@ test_player_new (TestPlayerState * state)
   GstPlayer *player;
   GstElement *playbin, *fakesink;
 
-  player = gst_player_new ();
+  player = gst_player_new_full (gst_player_g_main_context_signal_dispatcher_new (NULL));
   fail_unless (player != NULL);
 
   test_player_state_reset (state);
@@ -373,7 +373,6 @@ test_player_new (TestPlayerState * state)
   g_object_set (playbin, "video-sink", fakesink, NULL);
   gst_object_unref (playbin);
 
-  g_object_set (player, "dispatch-to-main-context", TRUE, NULL);
   g_signal_connect (player, "buffering", G_CALLBACK (buffering_cb), state);
   g_signal_connect (player, "duration-changed",
       G_CALLBACK (duration_changed_cb), state);
