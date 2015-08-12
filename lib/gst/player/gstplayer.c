@@ -574,9 +574,6 @@ gst_player_get_property (GObject * object, guint prop_id,
       g_value_set_string (value, self->uri);
       g_mutex_unlock (&self->lock);
       break;
-      GST_TRACE_OBJECT (self, "Returning is-playing=%d",
-          g_value_get_boolean (value));
-      break;
     case PROP_SUBURI:
       g_mutex_lock (&self->lock);
       g_value_set_string (value, self->suburi);
