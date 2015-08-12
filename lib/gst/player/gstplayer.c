@@ -3655,7 +3655,7 @@ gst_player_update_visualization_list (void)
 /**
  * gst_player_visualizations_get:
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type Gst.PlayerVisualization):
+ * Returns: (transfer full) (array zero-terminated=1) (element-type GstPlayerVisualization):
  *  a %NULL terminated array containing all available
  *  visualizations. Use gst_player_visualizations_free() after
  *  usage.
