@@ -359,7 +359,7 @@ test_player_new (TestPlayerState * state)
   GstPlayer *player;
   GstElement *playbin, *fakesink;
 
-  player = gst_player_new_full (gst_player_g_main_context_signal_dispatcher_new (NULL));
+  player = gst_player_new_full (NULL, gst_player_g_main_context_signal_dispatcher_new (NULL));
   fail_unless (player != NULL);
 
   test_player_state_reset (state);
