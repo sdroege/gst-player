@@ -4162,9 +4162,9 @@ gst_player_video_renderer_create_video_sink (GstPlayerVideoRenderer * self,
 {
   GstPlayerVideoRendererInterface *iface;
 
-  g_return_if_fail (GST_IS_PLAYER_VIDEO_RENDERER (self));
+  g_return_val_if_fail (GST_IS_PLAYER_VIDEO_RENDERER (self), NULL);
   iface = GST_PLAYER_VIDEO_RENDERER_GET_INTERFACE (self);
-  g_return_if_fail (iface->create_video_sink != NULL);
+  g_return_val_if_fail (iface->create_video_sink != NULL, NULL);
 
   return iface->create_video_sink (self, player);
 }
@@ -4351,7 +4351,8 @@ gpointer
     (GstPlayerVideoOverlayVideoRenderer * self) {
   gpointer window_handle;
 
-  g_return_if_fail (GST_IS_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER (self));
+  g_return_val_if_fail (GST_IS_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER (self),
+      NULL);
 
   g_object_get (self, "window-handle", &window_handle, NULL);
 
