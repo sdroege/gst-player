@@ -195,7 +195,7 @@ static void
 print_all_stream_info (GstPlayerMediaInfo * media_info)
 {
   guint count = 0;
-  GList *list = NULL, *l;
+  GList *list, *l;
 
   list = gst_player_media_info_get_stream_list (media_info);
   if (!list)
