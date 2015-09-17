@@ -33,9 +33,7 @@ struct _GstPlayerGtkVideoRendererClass
   GObjectClass parent_class;
 };
 
-static void
-    gst_player_gtk_video_renderer_interface_init
-    (GstPlayerVideoRendererInterface * iface);
+static void gst_player_gtk_video_renderer_interface_init (GstPlayerVideoRendererInterface * iface);
 
 enum
 {
@@ -49,8 +47,7 @@ G_DEFINE_TYPE_WITH_CODE (GstPlayerGtkVideoRenderer,
     G_IMPLEMENT_INTERFACE (GST_TYPE_PLAYER_VIDEO_RENDERER,
         gst_player_gtk_video_renderer_interface_init));
 
-static GParamSpec
-    * gtk_video_renderer_param_specs[GTK_VIDEO_RENDERER_PROP_LAST] = { NULL, };
+static GParamSpec *gtk_video_renderer_param_specs[GTK_VIDEO_RENDERER_PROP_LAST] = { NULL, };
 
 static void
 gst_player_gtk_video_renderer_get_property (GObject * object,
@@ -83,8 +80,7 @@ gst_player_gtk_video_renderer_finalize (GObject * object)
 }
 
 static void
-    gst_player_gtk_video_renderer_class_init
-    (GstPlayerGtkVideoRendererClass * klass)
+gst_player_gtk_video_renderer_class_init (GstPlayerGtkVideoRendererClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
@@ -122,8 +118,9 @@ gst_player_gtk_video_renderer_init (GstPlayerGtkVideoRenderer * self)
   g_object_get (gtk_sink, "widget", &self->widget, NULL);
 }
 
-static GstElement *gst_player_gtk_video_renderer_create_video_sink
-    (GstPlayerVideoRenderer * iface, GstPlayer * player)
+static GstElement *
+gst_player_gtk_video_renderer_create_video_sink (GstPlayerVideoRenderer * iface,
+    GstPlayer * player)
 {
   GstPlayerGtkVideoRenderer *self = GST_PLAYER_GTK_VIDEO_RENDERER (iface);
 
@@ -131,8 +128,7 @@ static GstElement *gst_player_gtk_video_renderer_create_video_sink
 }
 
 static void
-    gst_player_gtk_video_renderer_interface_init
-    (GstPlayerVideoRendererInterface * iface)
+gst_player_gtk_video_renderer_interface_init (GstPlayerVideoRendererInterface * iface)
 {
   iface->create_video_sink = gst_player_gtk_video_renderer_create_video_sink;
 }
@@ -164,8 +160,8 @@ gst_player_gtk_video_renderer_new (void)
  *
  * Returns: (transfer full): The GtkWidget
  */
-GtkWidget *gst_player_gtk_video_renderer_get_widget
-    (GstPlayerGtkVideoRenderer * self)
+GtkWidget *
+gst_player_gtk_video_renderer_get_widget (GstPlayerGtkVideoRenderer * self)
 {
   GtkWidget *widget;
 

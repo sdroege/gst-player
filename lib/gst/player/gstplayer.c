@@ -3942,10 +3942,8 @@ G_DEFINE_INTERFACE (GstPlayerSignalDispatcher, gst_player_signal_dispatcher,
     G_TYPE_OBJECT);
 
 static void
-gst_player_signal_dispatcher_default_init (GstPlayerSignalDispatcherInterface *
-    iface)
+gst_player_signal_dispatcher_default_init (GstPlayerSignalDispatcherInterface * iface)
 {
-
 }
 
 static void
@@ -3980,9 +3978,7 @@ struct _GstPlayerGMainContextSignalDispatcherClass
   GObjectClass parent_class;
 };
 
-static void
-    gst_player_g_main_context_signal_dispatcher_interface_init
-    (GstPlayerSignalDispatcherInterface * iface);
+static void gst_player_g_main_context_signal_dispatcher_interface_init (GstPlayerSignalDispatcherInterface * iface);
 
 enum
 {
@@ -3996,8 +3992,7 @@ G_DEFINE_TYPE_WITH_CODE (GstPlayerGMainContextSignalDispatcher,
     G_IMPLEMENT_INTERFACE (GST_TYPE_PLAYER_SIGNAL_DISPATCHER,
         gst_player_g_main_context_signal_dispatcher_interface_init));
 
-static GParamSpec
-    * g_main_context_signal_dispatcher_param_specs
+static GParamSpec *g_main_context_signal_dispatcher_param_specs
     [G_MAIN_CONTEXT_SIGNAL_DISPATCHER_PROP_LAST] = { NULL, };
 
 static void
@@ -4051,8 +4046,7 @@ gst_player_g_main_context_signal_dispatcher_get_property (GObject * object,
 }
 
 static void
-    gst_player_g_main_context_signal_dispatcher_class_init
-    (GstPlayerGMainContextSignalDispatcherClass * klass)
+gst_player_g_main_context_signal_dispatcher_class_init (GstPlayerGMainContextSignalDispatcherClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
@@ -4075,8 +4069,7 @@ static void
 }
 
 static void
-    gst_player_g_main_context_signal_dispatcher_init
-    (GstPlayerGMainContextSignalDispatcher * self)
+gst_player_g_main_context_signal_dispatcher_init (GstPlayerGMainContextSignalDispatcher * self)
 {
 }
 
@@ -4108,8 +4101,8 @@ g_main_context_signal_dispatcher_dispatch_destroy (gpointer user_data)
 }
 
 static void
-gst_player_g_main_context_signal_dispatcher_dispatch (GstPlayerSignalDispatcher
-    * iface, GstPlayer * player, void (*emitter) (gpointer data), gpointer data,
+gst_player_g_main_context_signal_dispatcher_dispatch (GstPlayerSignalDispatcher * iface,
+    GstPlayer * player, void (*emitter) (gpointer data), gpointer data,
     GDestroyNotify destroy)
 {
   GstPlayerGMainContextSignalDispatcher *self =
@@ -4127,8 +4120,7 @@ gst_player_g_main_context_signal_dispatcher_dispatch (GstPlayerSignalDispatcher
 }
 
 static void
-    gst_player_g_main_context_signal_dispatcher_interface_init
-    (GstPlayerSignalDispatcherInterface * iface)
+gst_player_g_main_context_signal_dispatcher_interface_init (GstPlayerSignalDispatcherInterface * iface)
 {
   iface->dispatch = gst_player_g_main_context_signal_dispatcher_dispatch;
 }
@@ -4140,8 +4132,7 @@ static void
  * Returns: (transfer full):
  */
 GstPlayerSignalDispatcher *
-gst_player_g_main_context_signal_dispatcher_new (GMainContext *
-    application_context)
+gst_player_g_main_context_signal_dispatcher_new (GMainContext * application_context)
 {
   return g_object_new (GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER,
       "application-context", application_context, NULL);
@@ -4182,9 +4173,7 @@ struct _GstPlayerVideoOverlayVideoRendererClass
   GObjectClass parent_class;
 };
 
-static void
-    gst_player_video_overlay_video_renderer_interface_init
-    (GstPlayerVideoRendererInterface * iface);
+static void gst_player_video_overlay_video_renderer_interface_init (GstPlayerVideoRendererInterface * iface);
 
 enum
 {
@@ -4198,9 +4187,7 @@ G_DEFINE_TYPE_WITH_CODE (GstPlayerVideoOverlayVideoRenderer,
     G_IMPLEMENT_INTERFACE (GST_TYPE_PLAYER_VIDEO_RENDERER,
         gst_player_video_overlay_video_renderer_interface_init));
 
-static GParamSpec
-    * video_overlay_video_renderer_param_specs
-    [VIDEO_OVERLAY_VIDEO_RENDERER_PROP_LAST] = { NULL, };
+static GParamSpec *video_overlay_video_renderer_param_specs[VIDEO_OVERLAY_VIDEO_RENDERER_PROP_LAST] = { NULL, };
 
 static void
 gst_player_video_overlay_video_renderer_set_property (GObject * object,
@@ -4253,8 +4240,7 @@ gst_player_video_overlay_video_renderer_finalize (GObject * object)
 }
 
 static void
-    gst_player_video_overlay_video_renderer_class_init
-    (GstPlayerVideoOverlayVideoRendererClass * klass)
+gst_player_video_overlay_video_renderer_class_init (GstPlayerVideoOverlayVideoRendererClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
@@ -4276,13 +4262,13 @@ static void
 }
 
 static void
-    gst_player_video_overlay_video_renderer_init
-    (GstPlayerVideoOverlayVideoRenderer * self)
+gst_player_video_overlay_video_renderer_init (GstPlayerVideoOverlayVideoRenderer * self)
 {
 }
 
-static GstElement *gst_player_video_overlay_video_renderer_create_video_sink
-    (GstPlayerVideoRenderer * iface, GstPlayer * player)
+static GstElement *
+gst_player_video_overlay_video_renderer_create_video_sink (GstPlayerVideoRenderer * iface,
+    GstPlayer * player)
 {
   GstElement *video_overlay;
   GstPlayerVideoOverlayVideoRenderer *self =
@@ -4303,8 +4289,7 @@ static GstElement *gst_player_video_overlay_video_renderer_create_video_sink
 }
 
 static void
-    gst_player_video_overlay_video_renderer_interface_init
-    (GstPlayerVideoRendererInterface * iface)
+gst_player_video_overlay_video_renderer_interface_init (GstPlayerVideoRendererInterface * iface)
 {
   iface->create_video_sink =
       gst_player_video_overlay_video_renderer_create_video_sink;
@@ -4331,8 +4316,9 @@ gst_player_video_overlay_video_renderer_new (gpointer window_handle)
  * Sets the platform specific window handle into which the video
  * should be rendered
  **/
-void gst_player_video_overlay_video_renderer_set_window_handle
-    (GstPlayerVideoOverlayVideoRenderer * self, gpointer window_handle)
+void
+gst_player_video_overlay_video_renderer_set_window_handle (GstPlayerVideoOverlayVideoRenderer * self,
+    gpointer window_handle)
 {
   g_return_if_fail (GST_IS_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER (self));
 
@@ -4347,8 +4333,8 @@ void gst_player_video_overlay_video_renderer_set_window_handle
  * handle
  */
 gpointer
-    gst_player_video_overlay_video_renderer_get_window_handle
-    (GstPlayerVideoOverlayVideoRenderer * self) {
+gst_player_video_overlay_video_renderer_get_window_handle (GstPlayerVideoOverlayVideoRenderer * self)
+{
   gpointer window_handle;
 
   g_return_val_if_fail (GST_IS_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER (self),
