@@ -361,7 +361,9 @@ test_player_new (TestPlayerState * state)
   GstPlayer *player;
   GstElement *playbin, *fakesink;
 
-  player = gst_player_new_full (NULL, gst_player_g_main_context_signal_dispatcher_new (NULL));
+  player =
+      gst_player_new_full (NULL,
+      gst_player_g_main_context_signal_dispatcher_new (NULL));
   fail_unless (player != NULL);
 
   test_player_state_reset (state);
@@ -561,8 +563,8 @@ test_video_info (GstPlayerMediaInfo * media_info)
     fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
     fail_unless_equals_int (gst_player_stream_info_get_index (stream), 0);
     fail_unless (strstr (gst_player_stream_info_get_codec (stream),
-            "H.264") != NULL || strstr (gst_player_stream_info_get_codec (stream),
-            "H264") != NULL);
+            "H.264") != NULL
+        || strstr (gst_player_stream_info_get_codec (stream), "H264") != NULL);
     fail_unless_equals_int (gst_player_video_info_get_width (video_info), 320);
     fail_unless_equals_int (gst_player_video_info_get_height (video_info), 240);
     gst_player_video_info_get_framerate (video_info, &fps_n, &fps_d);
@@ -1024,7 +1026,7 @@ test_play_rate_cb (GstPlayer * player,
     guint64 dur = -1, pos = -1;
 
     g_object_get (player, "position", &pos, "duration", &dur, NULL);
-    pos = pos + dur * 0.2;       /* seek 20% */
+    pos = pos + dur * 0.2;      /* seek 20% */
     gst_player_seek (player, pos);
 
     /* default rate should be 1.0 */
@@ -1370,10 +1372,11 @@ test_play_position_update_interval_cb (GstPlayer * player,
 
     if (GST_CLOCK_TIME_IS_VALID (last_position)) {
       GstClockTime interval = GST_CLOCK_DIFF (last_position, position);
-      GST_DEBUG_OBJECT (player, "position update interval: %" GST_TIME_FORMAT "\n",
+      GST_DEBUG_OBJECT (player,
+          "position update interval: %" GST_TIME_FORMAT "\n",
           GST_TIME_ARGS (interval));
-      fail_unless (interval > (590 * GST_MSECOND) &&
-          interval < (610 * GST_MSECOND));
+      fail_unless (interval > (590 * GST_MSECOND)
+          && interval < (610 * GST_MSECOND));
     }
 
     last_position = position;
