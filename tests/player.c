@@ -561,7 +561,8 @@ test_video_info (GstPlayerMediaInfo * media_info)
     fail_unless (gst_player_stream_info_get_caps (stream) != NULL);
     fail_unless_equals_int (gst_player_stream_info_get_index (stream), 0);
     fail_unless (strstr (gst_player_stream_info_get_codec (stream),
-            "H.264") != NULL);
+            "H.264") != NULL || strstr (gst_player_stream_info_get_codec (stream),
+            "H264") != NULL);
     fail_unless_equals_int (gst_player_video_info_get_width (video_info), 320);
     fail_unless_equals_int (gst_player_video_info_get_height (video_info), 240);
     gst_player_video_info_get_framerate (video_info, &fps_n, &fps_d);
