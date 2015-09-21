@@ -1023,21 +1023,22 @@ test_play_rate_cb (GstPlayer * player,
     guint64 dur = -1, pos = -1;
 
     g_object_get (player, "position", &pos, "duration", &dur, NULL);
-    pos = pos + dur * 20;       /* seek 20% */
+    pos = pos + dur * 0.2;       /* seek 20% */
     gst_player_seek (player, pos);
 
     /* default rate should be 1.0 */
     fail_unless_equals_double (gst_player_get_rate (player), 1.0);
-
+    new_state->test_data = GINT_TO_POINTER (mask + steps + 1);
+  } else if (change == STATE_CHANGE_END_OF_STREAM ||
+      change == STATE_CHANGE_ERROR) {
+    g_main_loop_quit (new_state->loop);
+  } else if (steps == 1 && change == STATE_CHANGE_SEEK_DONE) {
     if (mask == 0x10)
       gst_player_set_rate (player, 1.5);
     else if (mask == 0x20)
       gst_player_set_rate (player, -1.0);
 
     new_state->test_data = GINT_TO_POINTER (mask + steps + 1);
-  } else if (change == STATE_CHANGE_END_OF_STREAM ||
-      change == STATE_CHANGE_ERROR) {
-    g_main_loop_quit (new_state->loop);
   } else if (steps && (change == STATE_CHANGE_POSITION_UPDATED)) {
     if (steps == 10) {
       g_main_loop_quit (new_state->loop);
