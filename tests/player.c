@@ -151,6 +151,8 @@ test_player_state_change_get_name (TestPlayerStateChange change)
       return "duration-changed";
     case STATE_CHANGE_END_OF_STREAM:
       return "end-of-stream";
+    case STATE_CHANGE_WARNING:
+      return "warning";
     case STATE_CHANGE_ERROR:
       return "error";
     case STATE_CHANGE_POSITION_UPDATED:
