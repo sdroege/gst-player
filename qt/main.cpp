@@ -30,7 +30,9 @@ int main(int argc, char *argv[])
     qmlRegisterType<Player>("Player", 1, 0, "Player");
 
     /* the plugin must be loaded before loading the qml file to register the
-     * GstGLVideoItem qml item */
+     * GstGLVideoItem qml item
+     * FIXME Add a QQmlExtensionPlugin into qmlglsink to register GstGLVideoItem
+     * with the QML engine, then remove this */
     gst_init(NULL,NULL);
     GstElement *sink = gst_element_factory_make ("qmlglsink", NULL);
     gst_object_unref(sink);
