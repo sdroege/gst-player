@@ -30,7 +30,7 @@ QuickRenderer::QuickRenderer(QObject *parent)
 
 QuickRenderer::~QuickRenderer()
 {
-
+    if (sink) gst_object_unref(sink);
 }
 
 GstElement *QuickRenderer::createVideoSink()
@@ -43,7 +43,7 @@ GstElement *QuickRenderer::createVideoSink()
 
     g_object_set (glsinkbin, "sink", qmlglsink, NULL);
 
-    sink = qmlglsink;
+    sink = static_cast<GstElement*>(gst_object_ref_sink(qmlglsink));
 
     return glsinkbin;
 }
