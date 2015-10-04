@@ -384,6 +384,40 @@ ApplicationWindow {
                     anchors.bottom: parent.bottom
                     anchors.horizontalCenter: parent.horizontalCenter
 
+                    MouseArea {
+                        id: sliderMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        propagateComposedEvents: true
+
+                        onClicked: mouse.accepted = false;
+                        onPressed: mouse.accepted = false;
+                        onReleased: mouse.accepted = false;
+                        onDoubleClicked: mouse.accepted = false;
+                        onPositionChanged: mouse.accepted = false;
+                        onPressAndHold: mouse.accepted = false;
+                    }
+
+                    Rectangle {
+                        id: hoveredcliptime
+                        width: 40
+                        height: 17
+                        color: "lightgray"
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: sliderMouseArea.containsMouse
+                        x: sliderMouseArea.mouseX
+
+                        Text {
+                            font.pointSize: 13
+                            color: "black"
+                            anchors.centerIn: parent
+                            text: {
+                                var value = (sliderMouseArea.mouseX - slider.x) * player.duration / (slider.width - slider.x)
+                                var date = new Date(Math.floor(value / 1e6));
+                                date.getMinutes() + ":" + ('0' + date.getSeconds()).slice(-2)
+                            }
+                        }
+                    }
 
                     style: SliderStyle {
                         groove: Item {
