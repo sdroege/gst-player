@@ -42,8 +42,7 @@ gst_player_stream_info_finalize (GObject * object)
 {
   GstPlayerStreamInfo *sinfo = GST_PLAYER_STREAM_INFO (object);
 
-  if (sinfo->codec)
-    g_free (sinfo->codec);
+  g_free (sinfo->codec);
 
   if (sinfo->caps)
     gst_caps_unref (sinfo->caps);
@@ -367,8 +366,7 @@ gst_player_subtitle_info_finalize (GObject * object)
 {
   GstPlayerSubtitleInfo *info = GST_PLAYER_SUBTITLE_INFO (object);
 
-  if (info->language)
-    g_free (info->language);
+  g_free (info->language);
 
   G_OBJECT_CLASS (gst_player_subtitle_info_parent_class)->finalize (object);
 }
@@ -415,11 +413,9 @@ gst_player_media_info_finalize (GObject * object)
   if (info->tags)
     gst_tag_list_unref (info->tags);
 
-  if (info->title)
-    g_free (info->title);
+  g_free (info->title);
 
-  if (info->container)
-    g_free (info->container);
+  g_free (info->container);
 
   if (info->image_sample)
     gst_sample_unref (info->image_sample);

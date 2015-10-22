@@ -425,8 +425,7 @@ gst_player_finalize (GObject * object)
   GST_TRACE_OBJECT (self, "Finalizing");
 
   g_free (self->uri);
-  if (self->suburi)
-    g_free (self->suburi);
+  g_free (self->suburi);
   if (self->global_tags)
     gst_tag_list_unref (self->global_tags);
   if (self->video_renderer)
@@ -530,8 +529,7 @@ gst_player_set_property (GObject * object, guint prop_id,
       break;
     case PROP_URI:{
       g_mutex_lock (&self->lock);
-      if (self->uri)
-        g_free (self->uri);
+      g_free (self->uri);
 
       self->uri = g_value_dup_string (value);
       GST_DEBUG_OBJECT (self, "Set uri=%s", self->uri);
@@ -543,8 +541,7 @@ gst_player_set_property (GObject * object, guint prop_id,
     }
     case PROP_SUBURI:{
       g_mutex_lock (&self->lock);
-      if (self->suburi)
-        g_free (self->suburi);
+      g_free (self->suburi);
 
       self->suburi = g_value_dup_string (value);
       GST_DEBUG_OBJECT (self, "Set suburi=%s", self->suburi);
@@ -1528,12 +1525,10 @@ request_state_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 static void
 media_info_update (GstPlayer * self, GstPlayerMediaInfo * info)
 {
-  if (info->title)
-    g_free (info->title);
+  g_free (info->title);
   info->title = get_from_tags (self, info, get_title);
 
-  if (info->container)
-    g_free (info->container);
+  g_free (info->container);
   info->container = get_from_tags (self, info, get_container_format);
 
   if (info->image_sample)
@@ -1626,8 +1621,7 @@ element_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
       target_state = self->target_state;
 
       g_mutex_lock (&self->lock);
-      if (self->uri)
-        g_free (self->uri);
+      g_free (self->uri);
 
       self->uri = g_strdup (new_location);
       g_mutex_unlock (&self->lock);
@@ -1745,10 +1739,8 @@ gst_player_subtitle_info_update (GstPlayer * self,
   if (stream_info->tags) {
 
     /* free the old language info */
-    if (info->language) {
-      g_free (info->language);
-      info->language = NULL;
-    }
+    g_free (info->language);
+    info->language = NULL;
 
     /* First try to get the language full name from tag, if name is not
      * available then try language code. If we find the language code
@@ -1787,10 +1779,8 @@ gst_player_subtitle_info_update (GstPlayer * self,
     }
 
   } else {
-    if (info->language) {
-      g_free (info->language);
-      info->language = NULL;
-    }
+    g_free (info->language);
+    info->language = NULL;
   }
 
   GST_DEBUG_OBJECT (self, "language=%s", info->language);
@@ -1913,10 +1903,8 @@ gst_player_audio_info_update (GstPlayer * self,
       info->max_bitrate = -1;
 
     /* if we have old language the free it */
-    if (info->language) {
-      g_free (info->language);
-      info->language = NULL;
-    }
+    g_free (info->language);
+    info->language = NULL;
 
     /* First try to get the language full name from tag, if name is not
      * available then try language code. If we find the language code
@@ -1935,10 +1923,8 @@ gst_player_audio_info_update (GstPlayer * self,
       }
     }
   } else {
-    if (info->language) {
-      g_free (info->language);
-      info->language = NULL;
-    }
+    g_free (info->language);
+    info->language = NULL;
     info->max_bitrate = info->bitrate = -1;
   }
 
@@ -2070,8 +2056,7 @@ gst_player_stream_info_update_tags_and_caps (GstPlayer * self,
     gst_caps_unref (s->caps);
   s->caps = get_caps (self, stream_index, G_OBJECT_TYPE (s));
 
-  if (s->codec)
-    g_free (s->codec);
+  g_free (s->codec);
   s->codec = stream_info_get_codec (s);
 
   GST_DEBUG_OBJECT (self, "%s index: %d tags: %p caps: %p",
@@ -3417,8 +3402,7 @@ gst_player_set_subtitle_uri (GstPlayer * self, const gchar * suburi)
   g_return_val_if_fail (GST_IS_PLAYER (self), FALSE);
 
   g_mutex_lock (&self->lock);
-  if (self->suburi)
-    g_free (self->suburi);
+  g_free (self->suburi);
   self->suburi = g_strdup (suburi);
   g_mutex_unlock (&self->lock);
 
