@@ -917,49 +917,72 @@ _get_current_track_index (GtkPlay * play, void *(*func) (GstPlayer * player))
 static gint
 get_current_track_index (GtkPlay * play, GType type)
 {
-  if (type == GST_TYPE_PLAYER_VIDEO_INFO)
-    return _get_current_track_index (play,
-        (void *) gst_player_get_current_video_track);
-  else if (type == GST_TYPE_PLAYER_AUDIO_INFO)
-    return _get_current_track_index (play,
-        (void *) gst_player_get_current_audio_track);
-  else
-    return _get_current_track_index (play,
-        (void *) gst_player_get_current_subtitle_track);
+  gint index = -1;
+  switch (type) {
+    case GST_TYPE_PLAYER_VIDEO_INFO:
+    {
+      index = _get_current_track_index (play, (void *) gst_player_get_current_video_track);
+      break;
+    }
+    case GST_TYPE_PLAYER_AUDIO_INFO:
+    {
+      index = _get_current_track_index (play, (void *) gst_player_get_current_audio_track);
+      break;
+    }
+    case GST_TYPE_PLAYER_SUBTITLE_INFO:
+    default:
+    {
+      index = _get_current_track_index (play, (void *) gst_player_get_current_subtitle_track);
+      break;
+    }
+  }
+
+  return index;
 }
 
 static gchar *
 get_menu_label (GstPlayerStreamInfo * stream, GType type)
 {
-  if (type == GST_TYPE_PLAYER_AUDIO_INFO) {
-    gchar *label = NULL;
-    gchar *lang, *codec, *channels;
+  gchar *label = NULL;
 
-    /* label format: <codec_name> <channel> [language] */
-    lang = stream_info_get_string (stream, AUDIO_INFO_LANGUAGE, FALSE);
-    codec = stream_info_get_string (stream, AUDIO_INFO_CODEC, FALSE);
-    channels = stream_info_get_string (stream, AUDIO_INFO_CHANNELS, FALSE);
+  switch (type) {
+    case GST_TYPE_PLAYER_AUDIO_INFO:
+    {
+      gchar *lang, *codec, *channels;
 
-    if (lang) {
-      label = g_strdup_printf ("%s %s [%s]", codec ? codec : "",
-          channels ? channels : "", lang);
-      g_free (lang);
-    } else
-      label = g_strdup_printf ("%s %s", codec ? codec : "",
-          channels ? channels : "");
+      /* label format: <codec_name> <channel> [language] */
+      lang = stream_info_get_string (stream, AUDIO_INFO_LANGUAGE, FALSE);
+      codec = stream_info_get_string (stream, AUDIO_INFO_CODEC, FALSE);
+      channels = stream_info_get_string (stream, AUDIO_INFO_CHANNELS, FALSE);
 
-    g_free (codec);
-    g_free (channels);
-    return label;
-  } else if (type == GST_TYPE_PLAYER_VIDEO_INFO) {
-    /* label format: <codec_name> */
-    return stream_info_get_string (stream, VIDEO_INFO_CODEC, FALSE);
-  } else {
-    /* label format: <langauge> */
-    return stream_info_get_string (stream, SUBTITLE_INFO_LANGUAGE, FALSE);
+      if (lang) {
+        label = g_strdup_printf ("%s %s [%s]", codec ? codec : "",
+            channels ? channels : "", lang);
+        g_free (lang);
+      } else
+        label = g_strdup_printf ("%s %s", codec ? codec : "",
+            channels ? channels : "");
+
+      g_free (codec);
+      g_free (channels);
+      break;
+    }
+    case GST_TYPE_PLAYER_VIDEO_INFO:
+    {
+      /* label format: <codec_name> */
+      label = stream_info_get_string (stream, VIDEO_INFO_CODEC, FALSE);
+      break;
+    }
+    case GST_TYPE_PLAYER_SUBTITLE_INFO:
+    default:
+    {
+      /* label format: <langauge> */
+      label = stream_info_get_string (stream, SUBTITLE_INFO_LANGUAGE, FALSE);
+      break;
+    }
   }
 
-  return NULL;
+  return label;
 }
 
 static void
@@ -977,26 +1000,49 @@ new_subtitle_clicked_cb (GtkWidget * unused, GtkPlay * play)
 static void
 disable_track (GtkPlay * play, GType type)
 {
-  if (type == GST_TYPE_PLAYER_VIDEO_INFO) {
-    gst_player_set_video_track_enabled (play->player, FALSE);
-  } else if (type == GST_TYPE_PLAYER_AUDIO_INFO)
-    gst_player_set_audio_track_enabled (play->player, FALSE);
-  else
-    gst_player_set_subtitle_track_enabled (play->player, FALSE);
+  switch (type) {
+    case GST_TYPE_PLAYER_VIDEO_INFO:
+    {
+      gst_player_set_video_track_enabled (play->player, FALSE);
+      break;
+    }
+    case GST_TYPE_PLAYER_AUDIO_INFO:
+    {
+      gst_player_set_audio_track_enabled (play->player, FALSE);
+      break;
+    }
+    case GST_TYPE_PLAYER_SUBTITLE_INFO:
+    default:
+    {
+      gst_player_set_subtitle_track_enabled (play->player, FALSE);
+      break;
+    }
+  }
 }
 
 static void
 change_track (GtkPlay * play, gint index, GType type)
 {
-  if (type == GST_TYPE_PLAYER_VIDEO_INFO) {
-    gst_player_set_video_track (play->player, index);
-    gst_player_set_video_track_enabled (play->player, TRUE);
-  } else if (type == GST_TYPE_PLAYER_AUDIO_INFO) {
-    gst_player_set_audio_track (play->player, index);
-    gst_player_set_audio_track_enabled (play->player, TRUE);
-  } else {
-    gst_player_set_subtitle_track (play->player, index);
-    gst_player_set_subtitle_track_enabled (play->player, TRUE);
+  switch (type) {
+    case GST_TYPE_PLAYER_VIDEO_INFO:
+    {
+      gst_player_set_video_track (play->player, index);
+      gst_player_set_video_track_enabled (play->player, TRUE);
+      break;
+    }
+    case GST_TYPE_PLAYER_AUDIO_INFO:
+    {
+      gst_player_set_audio_track (play->player, index);
+      gst_player_set_audio_track_enabled (play->player, TRUE);
+      break;
+    }
+    case GST_TYPE_PLAYER_SUBTITLE_INFO:
+    default:
+    {
+      gst_player_set_subtitle_track (play->player, index);
+      gst_player_set_subtitle_track_enabled (play->player, TRUE);
+      break;
+    }
   }
 }
 
