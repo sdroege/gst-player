@@ -2348,6 +2348,7 @@ gst_player_main (gpointer data)
   GstBus *bus;
   GSource *source;
   GSource *bus_source;
+  GstElement *scaletempo;
 
   GST_TRACE_OBJECT (self, "Starting main thread");
 
@@ -2368,6 +2369,14 @@ gst_player_main (gpointer data)
 
     if (video_sink)
       g_object_set (self->playbin, "video-sink", video_sink, NULL);
+  }
+
+  scaletempo = gst_element_factory_make ("scaletempo", NULL);
+  if (scaletempo) {
+    g_object_set (self->playbin, "audio-filter", scaletempo, NULL);
+  } else {
+    g_warning ("GstPlayer: scaletempo element not available. Audio pitch "
+        "will not be preserved during trick modes");
   }
 
   self->bus = bus = gst_element_get_bus (self->playbin);
