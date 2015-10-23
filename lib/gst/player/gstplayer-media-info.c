@@ -159,7 +159,7 @@ gst_player_video_info_init (GstPlayerVideoInfo * info)
 }
 
 static void
-gst_player_video_info_class_init (GstPlayerVideoInfoClass * klass)
+gst_player_video_info_class_init (G_GNUC_UNUSED GstPlayerVideoInfoClass * klass)
 {
   /* nothing to do here */
 }
@@ -356,7 +356,7 @@ G_DEFINE_TYPE (GstPlayerSubtitleInfo, gst_player_subtitle_info,
     GST_TYPE_PLAYER_STREAM_INFO);
 
 static void
-gst_player_subtitle_info_init (GstPlayerSubtitleInfo * info)
+gst_player_subtitle_info_init (G_GNUC_UNUSED GstPlayerSubtitleInfo * info)
 {
   /* nothing to do */
 }

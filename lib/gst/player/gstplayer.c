@@ -207,8 +207,8 @@ static void gst_player_stream_info_update (GstPlayer * self,
     GstPlayerStreamInfo * s);
 static void gst_player_stream_info_update_tags_and_caps (GstPlayer * self,
     GstPlayerStreamInfo * s);
-static GstPlayerStreamInfo *gst_player_stream_info_find (GstPlayer * self,
-    GstPlayerMediaInfo * media_info, GType type, gint stream_index);
+static GstPlayerStreamInfo *gst_player_stream_info_find (GstPlayerMediaInfo *
+    media_info, GType type, gint stream_index);
 static GstPlayerStreamInfo *gst_player_stream_info_get_current (GstPlayer *
     self, const gchar * prop, GType type);
 
@@ -976,7 +976,7 @@ emit_warning (GstPlayer * self, GError * err)
 }
 
 static void
-error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+error_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GError *err, *player_err;
@@ -1015,7 +1015,7 @@ error_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 }
 
 static void
-warning_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+warning_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GError *err, *player_err;
@@ -1061,7 +1061,8 @@ eos_dispatch (gpointer user_data)
 }
 
 static void
-eos_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+eos_cb (G_GNUC_UNUSED GstBus * bus, G_GNUC_UNUSED GstMessage * msg,
+    gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
@@ -1104,7 +1105,7 @@ buffering_signal_data_free (BufferingSignalData * data)
 }
 
 static void
-buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+buffering_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   gint percent;
@@ -1177,7 +1178,8 @@ buffering_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 }
 
 static void
-clock_lost_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+clock_lost_cb (G_GNUC_UNUSED GstBus * bus, G_GNUC_UNUSED GstMessage * msg,
+    gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GstStateChangeReturn state_ret;
@@ -1271,7 +1273,8 @@ out:
 }
 
 static void
-notify_caps_cb (GObject * object, GParamSpec * pspec, gpointer user_data)
+notify_caps_cb (G_GNUC_UNUSED GObject * object,
+    G_GNUC_UNUSED GParamSpec * pspec, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
@@ -1358,7 +1361,8 @@ emit_seek_done (GstPlayer * self)
 }
 
 static void
-state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+state_changed_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg,
+    gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GstState old_state, new_state, pending_state;
@@ -1482,7 +1486,8 @@ state_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 }
 
 static void
-duration_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+duration_changed_cb (G_GNUC_UNUSED GstBus * bus, G_GNUC_UNUSED GstMessage * msg,
+    gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   gint64 duration;
@@ -1493,7 +1498,8 @@ duration_changed_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 }
 
 static void
-latency_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+latency_cb (G_GNUC_UNUSED GstBus * bus, G_GNUC_UNUSED GstMessage * msg,
+    gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
@@ -1503,7 +1509,8 @@ latency_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 }
 
 static void
-request_state_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+request_state_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg,
+    gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GstState state;
@@ -1540,7 +1547,7 @@ media_info_update (GstPlayer * self, GstPlayerMediaInfo * info)
 }
 
 static void
-tags_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+tags_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   GstTagList *tags = NULL;
@@ -1579,7 +1586,7 @@ tags_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
 }
 
 static void
-element_cb (GstBus * bus, GstMessage * msg, gpointer user_data)
+element_cb (G_GNUC_UNUSED GstBus * bus, GstMessage * msg, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
   const GstStructure *s;
@@ -1934,7 +1941,7 @@ gst_player_audio_info_update (GstPlayer * self,
 }
 
 static GstPlayerStreamInfo *
-gst_player_stream_info_find (GstPlayer * self, GstPlayerMediaInfo * media_info,
+gst_player_stream_info_find (GstPlayerMediaInfo * media_info,
     GType type, gint stream_index)
 {
   GList *list, *l;
@@ -1979,7 +1986,7 @@ gst_player_stream_info_get_current (GstPlayer * self, const gchar * prop,
 
   g_object_get (G_OBJECT (self->playbin), prop, &current, NULL);
   g_mutex_lock (&self->lock);
-  info = gst_player_stream_info_find (self, self->media_info, type, current);
+  info = gst_player_stream_info_find (self->media_info, type, current);
   if (info)
     info = gst_player_stream_info_copy (info);
   g_mutex_unlock (&self->lock);
@@ -2083,7 +2090,7 @@ gst_player_streams_info_create (GstPlayer * self,
 
   for (i = 0; i < total; i++) {
     /* check if stream already exist in the list */
-    s = gst_player_stream_info_find (self, media_info, type, i);
+    s = gst_player_stream_info_find (media_info, type, i);
 
     if (!s) {
       /* create a new stream info instance */
@@ -2112,7 +2119,7 @@ gst_player_streams_info_create (GstPlayer * self,
 }
 
 static void
-video_changed_cb (GObject * object, gpointer user_data)
+video_changed_cb (G_GNUC_UNUSED GObject * object, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
@@ -2123,7 +2130,7 @@ video_changed_cb (GObject * object, gpointer user_data)
 }
 
 static void
-audio_changed_cb (GObject * object, gpointer user_data)
+audio_changed_cb (G_GNUC_UNUSED GObject * object, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
@@ -2134,7 +2141,7 @@ audio_changed_cb (GObject * object, gpointer user_data)
 }
 
 static void
-subtitle_changed_cb (GObject * object, gpointer user_data)
+subtitle_changed_cb (G_GNUC_UNUSED GObject * object, gpointer user_data)
 {
   GstPlayer *self = GST_PLAYER (user_data);
 
@@ -2274,7 +2281,7 @@ tags_changed_cb (GstPlayer * self, gint stream_index, GType type)
 
   /* update the stream information */
   g_mutex_lock (&self->lock);
-  s = gst_player_stream_info_find (self, self->media_info, type, stream_index);
+  s = gst_player_stream_info_find (self->media_info, type, stream_index);
   gst_player_stream_info_update_tags_and_caps (self, s);
   g_mutex_unlock (&self->lock);
 
@@ -2282,7 +2289,7 @@ tags_changed_cb (GstPlayer * self, gint stream_index, GType type)
 }
 
 static void
-video_tags_changed_cb (GstElement * playbin, gint stream_index,
+video_tags_changed_cb (G_GNUC_UNUSED GstElement * playbin, gint stream_index,
     gpointer user_data)
 {
   tags_changed_cb (GST_PLAYER (user_data), stream_index,
@@ -2290,7 +2297,7 @@ video_tags_changed_cb (GstElement * playbin, gint stream_index,
 }
 
 static void
-audio_tags_changed_cb (GstElement * playbin, gint stream_index,
+audio_tags_changed_cb (G_GNUC_UNUSED GstElement * playbin, gint stream_index,
     gpointer user_data)
 {
   tags_changed_cb (GST_PLAYER (user_data), stream_index,
@@ -2298,7 +2305,7 @@ audio_tags_changed_cb (GstElement * playbin, gint stream_index,
 }
 
 static void
-subtitle_tags_changed_cb (GstElement * playbin, gint stream_index,
+subtitle_tags_changed_cb (G_GNUC_UNUSED GstElement * playbin, gint stream_index,
     gpointer user_data)
 {
   tags_changed_cb (GST_PLAYER (user_data), stream_index,
@@ -2312,8 +2319,9 @@ volume_changed_dispatch (gpointer user_data)
   g_object_notify_by_pspec (G_OBJECT (user_data), param_specs[PROP_VOLUME]);
 }
 
-static void inline
-volume_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
+static void
+volume_notify_cb (G_GNUC_UNUSED GObject * obj, G_GNUC_UNUSED GParamSpec * pspec,
+    GstPlayer * self)
 {
   if (g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_VOLUME_CHANGED], 0, NULL, NULL, NULL) != 0) {
@@ -2330,8 +2338,9 @@ mute_changed_dispatch (gpointer user_data)
   g_object_notify_by_pspec (G_OBJECT (user_data), param_specs[PROP_MUTE]);
 }
 
-static void inline
-mute_notify_cb (GObject * obj, GParamSpec * pspec, GstPlayer * self)
+static void
+mute_notify_cb (G_GNUC_UNUSED GObject * obj, G_GNUC_UNUSED GParamSpec * pspec,
+    GstPlayer * self)
 {
   if (g_signal_handler_find (self, G_SIGNAL_MATCH_ID,
           signals[SIGNAL_MUTE_CHANGED], 0, NULL, NULL, NULL) != 0) {
@@ -2469,7 +2478,7 @@ gst_player_main (gpointer data)
 }
 
 static gpointer
-gst_player_init_once (gpointer user_data)
+gst_player_init_once (G_GNUC_UNUSED gpointer user_data)
 {
   gst_init (NULL, NULL);
 
@@ -3262,7 +3271,7 @@ gst_player_set_audio_track (GstPlayer * self, gint stream_index)
   g_return_val_if_fail (GST_IS_PLAYER (self), 0);
 
   g_mutex_lock (&self->lock);
-  info = gst_player_stream_info_find (self, self->media_info,
+  info = gst_player_stream_info_find (self->media_info,
       GST_TYPE_PLAYER_AUDIO_INFO, stream_index);
   g_mutex_unlock (&self->lock);
   if (!info) {
@@ -3293,7 +3302,7 @@ gst_player_set_video_track (GstPlayer * self, gint stream_index)
 
   /* check if stream_index exist in our internal media_info list */
   g_mutex_lock (&self->lock);
-  info = gst_player_stream_info_find (self, self->media_info,
+  info = gst_player_stream_info_find (self->media_info,
       GST_TYPE_PLAYER_VIDEO_INFO, stream_index);
   g_mutex_unlock (&self->lock);
   if (!info) {
@@ -3323,7 +3332,7 @@ gst_player_set_subtitle_track (GstPlayer * self, gint stream_index)
   g_return_val_if_fail (GST_IS_PLAYER (self), 0);
 
   g_mutex_lock (&self->lock);
-  info = gst_player_stream_info_find (self, self->media_info,
+  info = gst_player_stream_info_find (self->media_info,
       GST_TYPE_PLAYER_SUBTITLE_INFO, stream_index);
   g_mutex_unlock (&self->lock);
   if (!info) {
@@ -3935,8 +3944,8 @@ G_DEFINE_INTERFACE (GstPlayerSignalDispatcher, gst_player_signal_dispatcher,
     G_TYPE_OBJECT);
 
 static void
-gst_player_signal_dispatcher_default_init (GstPlayerSignalDispatcherInterface *
-    iface)
+gst_player_signal_dispatcher_default_init (G_GNUC_UNUSED
+    GstPlayerSignalDispatcherInterface * iface)
 {
 
 }
@@ -4069,7 +4078,7 @@ static void
 
 static void
     gst_player_g_main_context_signal_dispatcher_init
-    (GstPlayerGMainContextSignalDispatcher * self)
+    (G_GNUC_UNUSED GstPlayerGMainContextSignalDispatcher * self)
 {
 }
 
@@ -4102,8 +4111,8 @@ g_main_context_signal_dispatcher_dispatch_destroy (gpointer user_data)
 
 static void
 gst_player_g_main_context_signal_dispatcher_dispatch (GstPlayerSignalDispatcher
-    * iface, GstPlayer * player, void (*emitter) (gpointer data), gpointer data,
-    GDestroyNotify destroy)
+    * iface, G_GNUC_UNUSED GstPlayer * player, void (*emitter) (gpointer data),
+    gpointer data, GDestroyNotify destroy)
 {
   GstPlayerGMainContextSignalDispatcher *self =
       GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER (iface);
@@ -4144,7 +4153,8 @@ G_DEFINE_INTERFACE (GstPlayerVideoRenderer, gst_player_video_renderer,
     G_TYPE_OBJECT);
 
 static void
-gst_player_video_renderer_default_init (GstPlayerVideoRendererInterface * iface)
+gst_player_video_renderer_default_init (G_GNUC_UNUSED
+    GstPlayerVideoRendererInterface * iface)
 {
 
 }
@@ -4270,7 +4280,7 @@ static void
 
 static void
     gst_player_video_overlay_video_renderer_init
-    (GstPlayerVideoOverlayVideoRenderer * self)
+    (G_GNUC_UNUSED GstPlayerVideoOverlayVideoRenderer * self)
 {
 }
 
