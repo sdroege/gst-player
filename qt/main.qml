@@ -83,6 +83,25 @@ ApplicationWindow {
         }
     }
 
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        onPositionChanged: {
+            playbar.opacity = 1.0
+            hidetimer.start()
+        }
+    }
+
+    Timer {
+        id: hidetimer
+        interval: 5000
+        onTriggered: {
+            playbar.opacity = 0.0
+            settings.visible = false
+            stop()
+        }
+    }
+
     FileDialog {
         id: fileDialog
         //nameFilters: [TODO globs from mime types]
