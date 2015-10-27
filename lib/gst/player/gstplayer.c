@@ -2382,7 +2382,14 @@ gst_player_main (gpointer data)
 
   scaletempo = gst_element_factory_make ("scaletempo", NULL);
   if (scaletempo) {
-    g_object_set (self->playbin, "audio-filter", scaletempo, NULL);
+    if (gst_plugin_feature_check_version (GST_PLUGIN_FEATURE
+            (gst_element_get_factory (scaletempo)), 1, 6, 1)) {
+      g_object_set (self->playbin, "audio-filter", scaletempo, NULL);
+    } else {
+      gst_object_unref (scaletempo);
+      g_warning ("GstPlayer: scaletempo >= 1.6.1 is needed for preserving "
+          "audio pitch during trick modes");
+    }
   } else {
     g_warning ("GstPlayer: scaletempo element not available. Audio pitch "
         "will not be preserved during trick modes");
