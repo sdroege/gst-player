@@ -10,20 +10,20 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\gst-play\gst-play.c">
+    <ClCompile Include="..\..\gst-play\gst-play.c">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\gst-play\gst-play-kb.c">
+    <ClCompile Include="..\..\gst-play\gst-play-kb.c">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\gst-play\gst-play-kb.h">
+    <ClInclude Include="..\..\gst-play\gst-play-kb.h">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="..\player\lib\player.lib">
+    <Library Include="..\libgstplayer\lib\libgstplayer.lib">
       <Filter>lib</Filter>
     </Library>
   </ItemGroup>

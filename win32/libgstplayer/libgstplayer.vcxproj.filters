@@ -11,24 +11,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\lib\gst\player\gstplayer.h">
+    <ClInclude Include="..\..\lib\gst\player\gstplayer.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\lib\gst\player\player.h">
+    <ClInclude Include="..\..\lib\gst\player\gstplayer-media-info.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\lib\gst\player\gstplayer-media-info.h">
+    <ClInclude Include="..\..\lib\gst\player\player.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\lib\gst\player\gstplayer-media-info-private.h">
+    <ClInclude Include="..\..\lib\gst\player\gstplayer-media-info-private.h">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\lib\gst\player\gstplayer.c">
+    <ClCompile Include="..\..\lib\gst\player\gstplayer-media-info.c">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\lib\gst\player\gstplayer-media-info.c">
+    <ClCompile Include="..\..\lib\gst\player\gstplayer.c">
       <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
