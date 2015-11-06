@@ -22,23 +22,13 @@ ChangeLog
 android/assets
 android/bin
 android/gen
-android/**/gst-build*
+android/gst-build*
 android/libs
 android/obj
 android/local.properties
 android/project.properties
 android/proguard-project.txt
 android/src/org/freedesktop/gstreamer/GStreamer.java
-android/.gradle
-android/.idea
-android/*.iml
-android/build/
-android/app/src/main/obj/
-android/app/build/
-android/app/src/main/jni/assets/
-android/app/src/main/jni/gst-build-armeabi/
-android/app/src/main/jni/src/
-android/app/src/main/libs/armeabi/libgst*.so
 
 gst-play/gst-play
 gtk/gtk-play
