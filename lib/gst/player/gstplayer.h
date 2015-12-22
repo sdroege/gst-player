@@ -22,6 +22,9 @@
 #define __GST_PLAYER_H__
 
 #include <gst/gst.h>
+#include <gst/player/gstplayer-types.h>
+#include <gst/player/gstplayer-signal-dispatcher.h>
+#include <gst/player/gstplayer-video-renderer.h>
 #include <gst/player/gstplayer-media-info.h>
 
 G_BEGIN_DECLS
@@ -62,9 +65,6 @@ typedef enum {
 
 const gchar *gst_player_error_get_name                (GstPlayerError error);
 
-typedef struct _GstPlayer GstPlayer;
-typedef struct _GstPlayerClass GstPlayerClass;
-
 #define GST_TYPE_PLAYER             (gst_player_get_type ())
 #define GST_IS_PLAYER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER))
 #define GST_IS_PLAYER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_PLAYER))
@@ -73,42 +73,8 @@ typedef struct _GstPlayerClass GstPlayerClass;
 #define GST_PLAYER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_PLAYER, GstPlayerClass))
 #define GST_PLAYER_CAST(obj)        ((GstPlayer*)(obj))
 
-typedef struct _GstPlayerSignalDispatcher GstPlayerSignalDispatcher;
-typedef struct _GstPlayerSignalDispatcherInterface GstPlayerSignalDispatcherInterface;
-
-#define GST_TYPE_PLAYER_SIGNAL_DISPATCHER                (gst_player_signal_dispatcher_get_type ())
-#define GST_PLAYER_SIGNAL_DISPATCHER(obj)                (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_PLAYER_SIGNAL_DISPATCHER, GstPlayerSignalDispatcher))
-#define GST_IS_PLAYER_SIGNAL_DISPATCHER(obj)             (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER_SIGNAL_DISPATCHER))
-#define GST_PLAYER_SIGNAL_DISPATCHER_GET_INTERFACE(inst) (G_TYPE_INSTANCE_GET_INTERFACE ((inst), GST_TYPE_PLAYER_SIGNAL_DISPATCHER, GstPlayerSignalDispatcherInterface))
-
-struct _GstPlayerSignalDispatcherInterface {
-  GTypeInterface parent_iface;
-
-  void (*dispatch) (GstPlayerSignalDispatcher * self,
-                    GstPlayer * player,
-                    void (*emitter) (gpointer data),
-                    gpointer data,
-                    GDestroyNotify destroy);
-};
-
-typedef struct _GstPlayerVideoRenderer GstPlayerVideoRenderer;
-typedef struct _GstPlayerVideoRendererInterface GstPlayerVideoRendererInterface;
-
-#define GST_TYPE_PLAYER_VIDEO_RENDERER                (gst_player_video_renderer_get_type ())
-#define GST_PLAYER_VIDEO_RENDERER(obj)                (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_PLAYER_VIDEO_RENDERER, GstPlayerVideoRenderer))
-#define GST_IS_PLAYER_VIDEO_RENDERER(obj)             (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER_VIDEO_RENDERER))
-#define GST_PLAYER_VIDEO_RENDERER_GET_INTERFACE(inst) (G_TYPE_INSTANCE_GET_INTERFACE ((inst), GST_TYPE_PLAYER_VIDEO_RENDERER, GstPlayerVideoRendererInterface))
-
-struct _GstPlayerVideoRendererInterface {
-  GTypeInterface parent_iface;
-
-  GstElement * (*create_video_sink) (GstPlayerVideoRenderer * self, GstPlayer * player);
-};
 
 GType        gst_player_get_type                      (void);
-
-GType        gst_player_video_renderer_get_type       (void);
-GType        gst_player_signal_dispatcher_get_type    (void);
 
 GstPlayer *  gst_player_new                           (void);
 GstPlayer *  gst_player_new_full                      (GstPlayerVideoRenderer * video_renderer, GstPlayerSignalDispatcher * signal_dispatcher);
@@ -234,41 +200,6 @@ void     gst_player_set_color_balance (GstPlayer * player,
                                        gdouble value);
 gdouble  gst_player_get_color_balance (GstPlayer * player,
                                        GstPlayerColorBalanceType type);
-
-typedef struct _GstPlayerGMainContextSignalDispatcher
-    GstPlayerGMainContextSignalDispatcher;
-typedef struct _GstPlayerGMainContextSignalDispatcherClass
-    GstPlayerGMainContextSignalDispatcherClass;
-
-#define GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER             (gst_player_g_main_context_signal_dispatcher_get_type ())
-#define GST_IS_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER))
-#define GST_IS_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER))
-#define GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER, GstPlayerGMainContextSignalDispatcherClass))
-#define GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER, GstPlayerGMainContextSignalDispatcher))
-#define GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER, GstPlayerGMainContextSignalDispatcherClass))
-#define GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_CAST(obj)        ((GstPlayerGMainContextSignalDispatcher*)(obj))
-
-GType gst_player_g_main_context_signal_dispatcher_get_type (void);
-
-GstPlayerSignalDispatcher * gst_player_g_main_context_signal_dispatcher_new (GMainContext * application_context);
-
-typedef struct _GstPlayerVideoOverlayVideoRenderer
-    GstPlayerVideoOverlayVideoRenderer;
-typedef struct _GstPlayerVideoOverlayVideoRendererClass
-    GstPlayerVideoOverlayVideoRendererClass;
-
-#define GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER             (gst_player_video_overlay_video_renderer_get_type ())
-#define GST_IS_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER))
-#define GST_IS_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER))
-#define GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER, GstPlayerVideoOverlayVideoRendererClass))
-#define GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER, GstPlayerVideoOverlayVideoRenderer))
-#define GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER, GstPlayerVideoOverlayVideoRendererClass))
-#define GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER_CAST(obj)        ((GstPlayerVideoOverlayVideoRenderer*)(obj))
-
-GType gst_player_video_overlay_video_renderer_get_type (void);
-GstPlayerVideoRenderer * gst_player_video_overlay_video_renderer_new (gpointer window_handle);
-void gst_player_video_overlay_video_renderer_set_window_handle (GstPlayerVideoOverlayVideoRenderer * self, gpointer window_handle);
-gpointer gst_player_video_overlay_video_renderer_get_window_handle (GstPlayerVideoOverlayVideoRenderer * self);
 
 G_END_DECLS
 

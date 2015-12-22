@@ -67,7 +67,7 @@ G_STMT_START {                                                          \
     "'" #a "' (%lf) is not equal to '" #b"' (%lf)", first, second);     \
 } G_STMT_END;
 
-#include <gst/player/gstplayer.h>
+#include <gst/player/player.h>
 
 GST_DEBUG_CATEGORY_STATIC (test_debug);
 #define GST_CAT_DEFAULT test_debug

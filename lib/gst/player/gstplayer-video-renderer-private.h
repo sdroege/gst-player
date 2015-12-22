@@ -1,6 +1,6 @@
 /* GStreamer
  *
- * Copyright (C) 2014 Sebastian Dröge <sebastian@centricular.com>
+ * Copyright (C) 2014-2015 Sebastian Dröge <sebastian@centricular.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,12 +18,16 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __PLAYER_H__
-#define __PLAYER_H__
+#ifndef __GST_PLAYER_VIDEO_RENDERER_PRIVATE_H__
+#define __GST_PLAYER_VIDEO_RENDERER_PRIVATE_H__
 
-#include <gst/player/gstplayer.h>
-#include <gst/player/gstplayer-media-info.h>
-#include <gst/player/gstplayer-g-main-context-signal-dispatcher.h>
-#include <gst/player/gstplayer-video-overlay-video-renderer.h>
+#include <gst/player/gstplayer-video-renderer.h>
 
-#endif /* __PLAYER_H__ */
+G_BEGIN_DECLS
+
+G_GNUC_INTERNAL GstElement * gst_player_video_renderer_create_video_sink (GstPlayerVideoRenderer *
+    self, GstPlayer * player);
+
+G_END_DECLS
+
+#endif /* __GST_PLAYER_VIDEO_RENDERER_PRIVATE_H__ */

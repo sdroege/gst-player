@@ -1,6 +1,6 @@
 /* GStreamer
  *
- * Copyright (C) 2014 Sebastian Dröge <sebastian@centricular.com>
+ * Copyright (C) 2014-2015 Sebastian Dröge <sebastian@centricular.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,12 +18,28 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef __PLAYER_H__
-#define __PLAYER_H__
+#include "gstplayer-video-renderer.h"
+#include "gstplayer-video-renderer-private.h"
 
-#include <gst/player/gstplayer.h>
-#include <gst/player/gstplayer-media-info.h>
-#include <gst/player/gstplayer-g-main-context-signal-dispatcher.h>
-#include <gst/player/gstplayer-video-overlay-video-renderer.h>
+G_DEFINE_INTERFACE (GstPlayerVideoRenderer, gst_player_video_renderer,
+    G_TYPE_OBJECT);
 
-#endif /* __PLAYER_H__ */
+static void
+gst_player_video_renderer_default_init (G_GNUC_UNUSED
+    GstPlayerVideoRendererInterface * iface)
+{
+
+}
+
+GstElement *
+gst_player_video_renderer_create_video_sink (GstPlayerVideoRenderer * self,
+    GstPlayer * player)
+{
+  GstPlayerVideoRendererInterface *iface;
+
+  g_return_val_if_fail (GST_IS_PLAYER_VIDEO_RENDERER (self), NULL);
+  iface = GST_PLAYER_VIDEO_RENDERER_GET_INTERFACE (self);
+  g_return_val_if_fail (iface->create_video_sink != NULL, NULL);
+
+  return iface->create_video_sink (self, player);
+}

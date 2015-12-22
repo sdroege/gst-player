@@ -2,7 +2,11 @@ lib_LTLIBRARIES = libgstplayer-@GST_PLAYER_API_VERSION@.la
 
 libgstplayer_@GST_PLAYER_API_VERSION@_la_SOURCES = \
 	gstplayer.c  \
-	gstplayer-media-info.c
+	gstplayer-signal-dispatcher.c  \
+	gstplayer-video-renderer.c  \
+	gstplayer-media-info.c \
+	gstplayer-g-main-context-signal-dispatcher.c  \
+	gstplayer-video-overlay-video-renderer.c
 
 libgstplayer_@GST_PLAYER_API_VERSION@_la_CFLAGS = \
 	-I$(top_srcdir)/lib \
@@ -23,12 +27,19 @@ libgstplayer_@GST_PLAYER_API_VERSION@_la_LIBADD = \
 
 libgstplayerdir = $(includedir)/gst-player-@GST_PLAYER_API_VERSION@/gst/player
 
-noinst_HEADERS = gstplayer-media-info-private.h
+noinst_HEADERS = \
+	gstplayer-signal-dispatcher-private.h \
+	gstplayer-video-renderer-private.h \
+	gstplayer-media-info-private.h
 
 libgstplayer_HEADERS = \
 	player.h \
 	gstplayer.h \
-	gstplayer-media-info.h
+	gstplayer-signal-dispatcher.h \
+	gstplayer-video-renderer.h \
+	gstplayer-media-info.h \
+	gstplayer-g-main-context-signal-dispatcher.h  \
+	gstplayer-video-overlay-video-renderer.h
 
 CLEANFILES =
 
