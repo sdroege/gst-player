@@ -65,6 +65,27 @@ typedef enum {
 
 const gchar *gst_player_error_get_name                (GstPlayerError error);
 
+GType gst_player_color_balance_type_get_type          (void);
+#define GST_TYPE_PLAYER_COLOR_BALANCE_TYPE            (gst_player_color_balance_type_get_type ())
+
+/**
+ * GstPlayerColorBalanceType:
+ * @GST_PLAYER_COLOR_BALANCE_BRIGHTNESS: brightness or black level.
+ * @GST_PLAYER_COLOR_BALANCE_CONTRAST: contrast or luma gain.
+ * @GST_PLAYER_COLOR_BALANCE_SATURATION: color saturation or chroma
+ * gain.
+ * @GST_PLAYER_COLOR_BALANCE_HUE: hue or color balance.
+ */
+typedef enum
+{
+  GST_PLAYER_COLOR_BALANCE_BRIGHTNESS,
+  GST_PLAYER_COLOR_BALANCE_CONTRAST,
+  GST_PLAYER_COLOR_BALANCE_SATURATION,
+  GST_PLAYER_COLOR_BALANCE_HUE,
+} GstPlayerColorBalanceType;
+
+const gchar *gst_player_color_balance_type_get_name   (GstPlayerColorBalanceType type);
+
 #define GST_TYPE_PLAYER             (gst_player_get_type ())
 #define GST_IS_PLAYER(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER))
 #define GST_IS_PLAYER_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_PLAYER))
@@ -151,33 +172,12 @@ void         gst_player_set_visualization_enabled     (GstPlayer    * player,
 
 gchar *      gst_player_get_current_visualization     (GstPlayer    * player);
 
-#define GST_TYPE_PLAYER_COLOR_BALANCE_TYPE   (gst_player_color_balance_type_get_type ())
-GType gst_player_color_balance_type_get_type (void);
-
-/**
- * GstPlayerColorBalanceType:
- * @GST_PLAYER_COLOR_BALANCE_BRIGHTNESS: brightness or black level.
- * @GST_PLAYER_COLOR_BALANCE_CONTRAST: contrast or luma gain.
- * @GST_PLAYER_COLOR_BALANCE_SATURATION: color saturation or chroma
- * gain.
- * @GST_PLAYER_COLOR_BALANCE_HUE: hue or color balance.
- */
-typedef enum
-{
-  GST_PLAYER_COLOR_BALANCE_BRIGHTNESS,
-  GST_PLAYER_COLOR_BALANCE_CONTRAST,
-  GST_PLAYER_COLOR_BALANCE_SATURATION,
-  GST_PLAYER_COLOR_BALANCE_HUE,
-} GstPlayerColorBalanceType;
-
-const gchar *gst_player_color_balance_type_get_name (GstPlayerColorBalanceType type);
-
-gboolean gst_player_has_color_balance (GstPlayer * player);
-void     gst_player_set_color_balance (GstPlayer * player,
-                                       GstPlayerColorBalanceType type,
-                                       gdouble value);
-gdouble  gst_player_get_color_balance (GstPlayer * player,
-                                       GstPlayerColorBalanceType type);
+gboolean     gst_player_has_color_balance             (GstPlayer    * player);
+void         gst_player_set_color_balance             (GstPlayer    * player,
+                                                       GstPlayerColorBalanceType type,
+                                                       gdouble value);
+gdouble      gst_player_get_color_balance             (GstPlayer    * player,
+                                                       GstPlayerColorBalanceType type);
 
 G_END_DECLS
 
