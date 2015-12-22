@@ -6,7 +6,8 @@ libgstplayer_@GST_PLAYER_API_VERSION@_la_SOURCES = \
 	gstplayer-video-renderer.c  \
 	gstplayer-media-info.c \
 	gstplayer-g-main-context-signal-dispatcher.c  \
-	gstplayer-video-overlay-video-renderer.c
+	gstplayer-video-overlay-video-renderer.c \
+	gstplayer-visualization.c
 
 libgstplayer_@GST_PLAYER_API_VERSION@_la_CFLAGS = \
 	-I$(top_srcdir)/lib \
@@ -39,7 +40,8 @@ libgstplayer_HEADERS = \
 	gstplayer-video-renderer.h \
 	gstplayer-media-info.h \
 	gstplayer-g-main-context-signal-dispatcher.h  \
-	gstplayer-video-overlay-video-renderer.h
+	gstplayer-video-overlay-video-renderer.h \
+	gstplayer-visualization.h
 
 CLEANFILES =
 

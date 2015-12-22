@@ -25,5 +25,6 @@
 #include <gst/player/gstplayer-media-info.h>
 #include <gst/player/gstplayer-g-main-context-signal-dispatcher.h>
 #include <gst/player/gstplayer-video-overlay-video-renderer.h>
+#include <gst/player/gstplayer-visualization.h>
 
 #endif /* __PLAYER_H__ */

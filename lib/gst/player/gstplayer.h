@@ -151,28 +151,6 @@ void         gst_player_set_visualization_enabled     (GstPlayer    * player,
 
 gchar *      gst_player_get_current_visualization     (GstPlayer    * player);
 
-typedef struct _GstPlayerVisualization GstPlayerVisualization;
-/**
- * GstPlayerVisualization:
- * @name: name of the visualization.
- * @description: description of the visualization.
- *
- * A #GstPlayerVisualization descriptor.
- */
-struct _GstPlayerVisualization {
-  gchar *name;
-  gchar *description;
-};
-
-GType                     gst_player_visualization_get_type (void);
-
-GstPlayerVisualization *  gst_player_visualization_copy  (const GstPlayerVisualization *vis);
-void                      gst_player_visualization_free  (GstPlayerVisualization *vis);
-
-GstPlayerVisualization ** gst_player_visualizations_get  (void);
-void                      gst_player_visualizations_free (GstPlayerVisualization **viss);
-
-
 #define GST_TYPE_PLAYER_COLOR_BALANCE_TYPE   (gst_player_color_balance_type_get_type ())
 GType gst_player_color_balance_type_get_type (void);
 
