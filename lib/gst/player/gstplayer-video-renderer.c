@@ -18,6 +18,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "gstplayer-video-renderer.h"
 #include "gstplayer-video-renderer-private.h"
 

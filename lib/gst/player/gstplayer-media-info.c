@@ -18,6 +18,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /**
  * SECTION:gstplayer-mediainfo
  * @short_description: GStreamer Player Media Information API
