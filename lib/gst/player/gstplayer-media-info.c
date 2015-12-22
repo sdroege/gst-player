@@ -18,15 +18,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:gstplayer-mediainfo
+ * @short_description: Player Media Information
+ *
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
-/**
- * SECTION:gstplayer-mediainfo
- * @short_description: GStreamer Player Media Information API
- *
- */
 
 #include "gstplayer-media-info.h"
 #include "gstplayer-media-info-private.h"
@@ -214,11 +214,15 @@ gst_player_video_info_get_framerate (const GstPlayerVideoInfo * info,
 /**
  * gst_player_video_info_get_pixel_aspect_ratio:
  * @info: a #GstPlayerVideoInfo
+ * @par_n: (out): numerator
+ * @par_d: (out): denominator
+ *
+ * Returns the pixel aspect ratio in @par_n and @par_d
  *
  */
 void
 gst_player_video_info_get_pixel_aspect_ratio (const GstPlayerVideoInfo * info,
-    guint * par_d, guint * par_n)
+    guint * par_n, guint * par_d)
 {
   g_return_if_fail (GST_IS_PLAYER_VIDEO_INFO (info));
 

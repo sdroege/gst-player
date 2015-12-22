@@ -19,13 +19,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /**
  * SECTION:gstplayer
- * @short_description: GStreamer Player API
+ * @short_description: Player
  *
  */
 
@@ -41,6 +37,10 @@
  * - Custom video sink (e.g. embed in GL scene)
  *
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gstplayer.h"
 #include "gstplayer-signal-dispatcher-private.h"

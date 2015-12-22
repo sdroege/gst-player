@@ -19,6 +19,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:gstplayer-visualization
+ * @short_description: Player Visualization
+ *
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -39,8 +45,7 @@ G_DEFINE_BOXED_TYPE (GstPlayerVisualization, gst_player_visualization,
  * gst_player_visualization_free:
  * @vis: #GstPlayerVisualization instance
  *
- * Frees #GstPlayerVisualization allocated using g_new() or
- * gst_player_visualization_copy().
+ * Frees a #GstPlayerVisualization.
  */
 void
 gst_player_visualization_free (GstPlayerVisualization * vis)

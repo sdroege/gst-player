@@ -18,6 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:gstplayer-videooverlayvideorenderer
+ * @short_description: Player Video Overlay Video Renderer
+ *
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif

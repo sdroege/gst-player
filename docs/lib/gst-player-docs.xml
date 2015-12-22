@@ -13,6 +13,9 @@
   <chapter>
     <xi:include href="xml/gstplayer.xml"/>
     <xi:include href="xml/gstplayer-mediainfo.xml"/>
+    <xi:include href="xml/gstplayer-gmaincontextsignaldispatcher.xml"/>
+    <xi:include href="xml/gstplayer-videooverlayvideorenderer.xml"/>
+    <xi:include href="xml/gstplayer-visualization.xml"/>
   </chapter>
 
   <chapter id="player-hierarchy">

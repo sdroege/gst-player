@@ -18,6 +18,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+/**
+ * SECTION:gstplayer-gmaincontextsignaldispatcher
+ * @short_description: Player GLib MainContext dispatcher
+ *
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -192,7 +198,10 @@ static void
  * gst_player_g_main_context_signal_dispatcher_new:
  * @application_context: (allow-none): GMainContext to use or %NULL
  *
- * Returns: (transfer full):
+ * Creates a new GstPlayerSignalDispatcher that uses @application_context,
+ * or the thread default one if %NULL is used. See gst_player_new_full().
+ *
+ * Returns: (transfer full): the new GstPlayerSignalDispatcher
  */
 GstPlayerSignalDispatcher *
 gst_player_g_main_context_signal_dispatcher_new (GMainContext *

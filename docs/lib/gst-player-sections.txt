@@ -58,12 +58,6 @@ gst_player_set_visualization
 gst_player_set_visualization_enabled
 gst_player_get_current_visualization
 
-GstPlayerVisualization
-gst_player_visualizations_get
-gst_player_visualizations_free
-gst_player_visualization_copy
-gst_player_visualization_free
-
 GstPlayerColorBalanceType
 gst_player_color_balance_type_get_name
 
@@ -77,14 +71,8 @@ gst_player_set_rate
 GstPlayerSignalDispatcher
 GstPlayerSignalDispatcherInterface
 
-gst_player_g_main_context_signal_dispatcher_new
-
 GstPlayerVideoRenderer
 GstPlayerVideoRendererInterface
-
-gst_player_video_overlay_video_renderer_new
-gst_player_video_overlay_video_renderer_get_window_handle
-gst_player_video_overlay_video_renderer_set_window_handle
 
 <SUBSECTION Standard>
 GST_IS_PLAYER
@@ -120,7 +108,13 @@ GST_IS_PLAYER_VIDEO_RENDERER
 GST_PLAYER_VIDEO_RENDERER
 GST_PLAYER_VIDEO_RENDERER_GET_INTERFACE
 gst_player_video_renderer_get_type
+</SECTION>
 
+<SECTION>
+<FILE>gstplayer-gmaincontextsignaldispatcher</FILE>
+gst_player_g_main_context_signal_dispatcher_new
+
+<SUBSECTION Standard>
 GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER
 GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_CAST
 GST_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_CLASS
@@ -130,7 +124,17 @@ GST_IS_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER_CLASS
 GST_TYPE_PLAYER_G_MAIN_CONTEXT_SIGNAL_DISPATCHER
 
 gst_player_g_main_context_signal_dispatcher_get_type
+</SECTION>
 
+<SECTION>
+<FILE>gstplayer-videooverlayvideorenderer</FILE>
+GstPlayerVideoOverlayVideoRenderer
+
+gst_player_video_overlay_video_renderer_new
+gst_player_video_overlay_video_renderer_get_window_handle
+gst_player_video_overlay_video_renderer_set_window_handle
+
+<SUBSECTION Standard>
 GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER
 GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER_CAST
 GST_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER_CLASS
@@ -141,6 +145,18 @@ GST_TYPE_PLAYER_VIDEO_OVERLAY_VIDEO_RENDERER
 
 gst_player_video_overlay_video_renderer_get_type
 
+</SECTION>
+
+<SECTION>
+<FILE>gstplayer-visualization</FILE>
+GstPlayerVisualization
+gst_player_visualizations_get
+gst_player_visualizations_free
+gst_player_visualization_copy
+gst_player_visualization_free
+
+<SUBSECTION Standard>
+gst_player_visualization_get_type
 </SECTION>
 
 <SECTION>
