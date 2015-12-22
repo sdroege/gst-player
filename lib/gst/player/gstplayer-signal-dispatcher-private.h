@@ -26,7 +26,7 @@
 G_BEGIN_DECLS
 
 G_GNUC_INTERNAL void gst_player_signal_dispatcher_dispatch (GstPlayerSignalDispatcher * self,
-    GstPlayer * player, void (*emitter) (gpointer data), gpointer data,
+    GstPlayer * player, GstPlayerSignalDispatcherFunc emitter, gpointer data,
     GDestroyNotify destroy);
 
 G_END_DECLS

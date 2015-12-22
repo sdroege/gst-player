@@ -34,12 +34,14 @@ typedef struct _GstPlayerSignalDispatcherInterface GstPlayerSignalDispatcherInte
 #define GST_IS_PLAYER_SIGNAL_DISPATCHER(obj)             (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_PLAYER_SIGNAL_DISPATCHER))
 #define GST_PLAYER_SIGNAL_DISPATCHER_GET_INTERFACE(inst) (G_TYPE_INSTANCE_GET_INTERFACE ((inst), GST_TYPE_PLAYER_SIGNAL_DISPATCHER, GstPlayerSignalDispatcherInterface))
 
+typedef void (*GstPlayerSignalDispatcherFunc) (gpointer data);
+
 struct _GstPlayerSignalDispatcherInterface {
   GTypeInterface parent_iface;
 
   void (*dispatch) (GstPlayerSignalDispatcher * self,
                     GstPlayer * player,
-                    void (*emitter) (gpointer data),
+                    GstPlayerSignalDispatcherFunc emitter,
                     gpointer data,
                     GDestroyNotify destroy);
 };

@@ -33,7 +33,7 @@ gst_player_signal_dispatcher_default_init (G_GNUC_UNUSED
 
 void
 gst_player_signal_dispatcher_dispatch (GstPlayerSignalDispatcher * self,
-    GstPlayer * player, void (*emitter) (gpointer data), gpointer data,
+    GstPlayer * player, GstPlayerSignalDispatcherFunc emitter, gpointer data,
     GDestroyNotify destroy)
 {
   GstPlayerSignalDispatcherInterface *iface;
