@@ -571,8 +571,8 @@ test_video_info (GstPlayerMediaInfo * media_info)
     fail_unless_equals_int (fps_n, 24);
     fail_unless_equals_int (fps_d, 1);
     gst_player_video_info_get_pixel_aspect_ratio (video_info, &par_n, &par_d);
-    fail_unless_equals_int (par_n, 20);
-    fail_unless_equals_int (par_d, 33);
+    fail_unless_equals_int (par_n, 33);
+    fail_unless_equals_int (par_d, 20);
   }
 }
 
