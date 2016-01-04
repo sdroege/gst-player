@@ -13,4 +13,4 @@ mkdir -p m4
 autoreconf -v --install || exit 1
 cd $ORIGDIR || exit $?
 
-$srcdir/configure --enable-maintainer-mode --enable-more-warnings --enable-warnings-as-errors --enable-gtk-doc "$@"
+$srcdir/configure --enable-maintainer-mode --enable-more-warnings --enable-warnings-as-errors "$@"

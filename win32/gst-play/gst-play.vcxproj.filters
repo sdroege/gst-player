@@ -22,9 +22,4 @@
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <Library Include="..\libgstplayer\lib\libgstplayer.lib">
-      <Filter>lib</Filter>
-    </Library>
-  </ItemGroup>
 </Project>

@@ -34,26 +34,10 @@ AC_C_BIGENDIAN
 AC_CHECK_LIBM
 AC_SUBST(LIBM)
 
-# set libtool versioning
-# +1 :  0 : +1   == new interface that does not break old one.
-# +1 :  0 :  0   == changed/removed an interface. Breaks old apps.
-#  ? : +1 :  ?   == internal changes that doesn't break anything.
-# CURRENT : REVISION : AGE
-LT_CURRENT=0
-LT_REVISION=0
-LT_AGE=0
-
-GST_PLAYER_API_VERSION=0.0
-AC_SUBST(GST_PLAYER_API_VERSION)
-
-AC_SUBST(LT_CURRENT)
-AC_SUBST(LT_REVISION)
-AC_SUBST(LT_AGE)
-
 PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.38.0 gobject-2.0 >= 2.38.0])
-PKG_CHECK_MODULES(GSTREAMER, [gstreamer-1.0 >= 1.6 gstreamer-video-1.0 >= 1.6 gstreamer-tag-1.0 >= 1.6 gstreamer-pbutils-1.0 >= 1.6])
+PKG_CHECK_MODULES(GSTREAMER, [gstreamer-1.0 >= 1.7.1 gstreamer-tag-1.0 gstreamer-player-1.0])
 
 GLIB_PREFIX="`$PKG_CONFIG --variable=prefix glib-2.0`"
 AC_SUBST(GLIB_PREFIX)
@@ -68,33 +52,6 @@ AM_CONDITIONAL(HAVE_GMODULE, test "x$have_gmodules" != "xno")
 
 PKG_CHECK_MODULES(GTK_X11, [gtk+-x11-3.0 x11], [have_gtk_x11="yes"], [have_gtk_x11="no"])
 AM_CONDITIONAL(HAVE_GTK_X11, test "x$have_gtk_x11" != "xno")
-
-GOBJECT_INTROSPECTION_CHECK([1.31.1])
-GTK_DOC_CHECK([1.16], [--flavour no-tmpl])
-
-PKG_CHECK_MODULES(CHECK, check, have_check="yes", have_check="no")
-AC_SUBST(CHECK_CFLAGS)
-AC_SUBST(CHECK_LIBS)
-AM_CONDITIONAL(HAVE_CHECK, test "x$have_check" != "xno")
-
-AC_PATH_PROG(VALGRIND, valgrind, no)
-
-have_valgrind_3_4_0=no
-if test "x$VALGRIND" != "xno"; then
-  valgrind_version=0
-  valgrind_version="`$VALGRIND --version | head -n 1 |  sed 's/^[[^0-9]]*//' | sed 's/[[^0-9]]*$//' | cut -d' ' -f1`"
-  AC_MSG_CHECKING([for valgrind version $valgrind_version >= 3.4.0])
-  if perl -we "exit ((v$valgrind_version ge v3.4.0) ? 0 : 1)"; then
-    have_valgrind_3_4_0=yes
-    AC_MSG_RESULT([yes])
-  else
-    AC_MSG_RESULT([no])
-  fi
-fi
-AM_CONDITIONAL(HAVE_VALGRIND, test "x$VALGRIND" != "xno" -a "x$have_valgrind_3_4_0" = "xyes")
-
-AC_PATH_PROG(GDB, gdb, no)
-AM_CONDITIONAL(HAVE_GDB, test ! "x$GDB" = "xno")
 
 WARNING_CFLAGS="-Wall"
 
@@ -142,19 +99,10 @@ AC_SUBST(WARNING_CFLAGS)
 
 AC_CONFIG_FILES([
   Makefile
-  lib/Makefile
-  lib/gst/Makefile
-  lib/gst/player/Makefile
   gst-play/Makefile
   gtk/Makefile
   android/Makefile
   ios/Makefile
-  tests/Makefile
-  docs/Makefile
-  docs/lib/Makefile
-  pkgconfig/Makefile
-  pkgconfig/gstreamer-player.pc
-  pkgconfig/gstreamer-player-uninstalled.pc
 ])
 
 AC_OUTPUT
