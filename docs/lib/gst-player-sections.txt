@@ -3,7 +3,6 @@
 GstPlayer
 
 gst_player_new
-gst_player_new_full
 
 gst_player_play
 gst_player_pause
