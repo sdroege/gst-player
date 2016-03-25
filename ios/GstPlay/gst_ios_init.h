@@ -15,7 +15,7 @@ G_PASTE(g_io_module_, G_PASTE(name, _load_static)) ()
  * You can also enable individual plugins. See gst_ios_init.c to see their names
  */
 
-#define GST_IOS_PLUGINS_GES
+//#define GST_IOS_PLUGINS_GES
 #define GST_IOS_PLUGINS_CORE
 //#define GST_IOS_PLUGINS_CAPTURE
 #define GST_IOS_PLUGINS_CODECS_RESTRICTED
