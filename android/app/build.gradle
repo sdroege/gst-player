@@ -7,7 +7,7 @@ def getNdkCommandLine(ndkRoot, target) {
     if (project.hasProperty('gstAndroidRoot'))
         gstRoot = project.gstAndroidRoot
     else
-        gstRoot = System.properties['user.home'] + '/cerbero/dist/android_arm'
+        throw new GradleException('"gstAndroidRoot" must be defined in your gradle properties to the top level directory of the unpacked universal GStreamer SDK')
 
     if (ndkRoot == null)
         throw new GradleException('NDK not configured')
@@ -22,7 +22,7 @@ def getNdkCommandLine(ndkRoot, target) {
 }
 
 android {
-    compileSdkVersion 23
+    compileSdkVersion 24
     buildToolsVersion "23.0.3"
 
     sourceSets {
@@ -36,7 +36,7 @@ android {
     defaultConfig {
         applicationId "org.freedesktop.gstreamer.play"
         minSdkVersion 15
-        targetSdkVersion 15
+        targetSdkVersion 24
         versionCode 1
         versionName "1.0"
     }
@@ -74,5 +74,5 @@ afterEvaluate {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
-    compile 'com.android.support:appcompat-v7:23.1.1'
+    compile 'com.android.support:appcompat-v7:24.2.0'
 }
